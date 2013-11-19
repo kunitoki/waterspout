@@ -1,5 +1,5 @@
 waterspout
-==========
+=========
 
 [![Build Status](https://api.travis-ci.org/kunitoki/waterspout.png)](https://travis-ci.org/kunitoki/waterspout)
 
@@ -17,3 +17,37 @@ set suited for that particular run of the application. It's also possible to
 opt-in or out at compile time which kind of instructions to enable, and with
 the software FPU fallback it's possible to run the same code on different and
 even old CPUs.
+
+
+References
+---------
+
+All intrinsics:
+  * http://software.intel.com/sites/products/documentation/studio/composer/en-us/2011Update/compiler_c/intref_cls/common/intref_bk_intrinsics.htm
+
+MMX:
+  * http://msdn.microsoft.com/it-it/library/ccky3awe(v=vs.90).aspx
+  * http://en.wikipedia.org/wiki/MMX_(instruction_set)
+  
+SSE:
+  * http://msdn.microsoft.com/it-it/library/t467de55(v=vs.90).aspx
+  * http://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
+
+SSE2:
+  * http://msdn.microsoft.com/it-it/library/kcwz153a(v=vs.90).aspx
+  * http://en.wikipedia.org/wiki/SSE2
+
+SSE3:
+  * http://software.intel.com/sites/products/documentation/studio/composer/en-us/2011Update/compiler_c/intref_cls/common/intref_sse3_overview.htm
+  * http://en.wikipedia.org/wiki/SSE3
+
+SSSE3:
+  * http://en.wikipedia.org/wiki/SSSE3
+
+SSE4 (SSE41 - SSE42 - SSE4A):
+  * http://msdn.microsoft.com/it-it/library/bb892950(v=vs.90).aspx
+  * http://msdn.microsoft.com/it-it/library/bb892945(v=vs.90).aspx
+  * http://en.wikipedia.org/wiki/SSE4
+
+AVX:
+  * http://en.wikipedia.org/wiki/Advanced_Vector_Extensions

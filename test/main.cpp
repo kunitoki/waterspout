@@ -32,12 +32,12 @@ int main(int argc, char* argv[])
         fpu->copy_buffer(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
         double elapsed = t.clock_elapsed();
 
-        check_buffers("FPU", srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << "FPU: " << std::setprecision(32) <<  elapsed << " " << srcBuffer.size() << std::endl;
+        check_buffers(fpu.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        std::cout << fpu.name() << ": " << std::setprecision(32) <<  elapsed << " " << srcBuffer.size() << std::endl;
     }
 
     {
-        math_factory sse2(FORCE_SSE2);
+        math_factory sse(FORCE_SSE);
         float_buffer srcBuffer(size), dstBuffer(size);
 
         for (int i = 0; i < srcBuffer.size(); ++i)
@@ -47,11 +47,11 @@ int main(int argc, char* argv[])
         }
 
         timer t;
-        sse2->copy_buffer(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        sse->copy_buffer(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
         double elapsed = t.clock_elapsed();
         
-        check_buffers("SSE", srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << "SSE: " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
+        check_buffers(sse.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        std::cout << sse.name() << ": " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
     }
 
     {
@@ -68,8 +68,8 @@ int main(int argc, char* argv[])
         avx->copy_buffer(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
         double elapsed = t.clock_elapsed();
         
-        check_buffers("AVX", srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << "AVX: " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
+        check_buffers(avx.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        std::cout << avx.name() << ": " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
     }
     
     return 0;

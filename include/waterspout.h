@@ -72,10 +72,10 @@
   #include <nmmintrin.h> // SSE4.2
 #endif
 
-//#if defined(__SSE4A__)
-//  #define WATERSPOUT_SIMD_SSE4A
-//  #include <ammintrin.h> // SSE4A
-//#endif
+#if defined(__SSE4A__)
+  #define WATERSPOUT_SIMD_SSE4A
+  #include <ammintrin.h> // SSE4A
+#endif
 
 #if defined(__AES__)
   #define WATERSPOUT_SIMD_AES
@@ -444,6 +444,8 @@ typedef aligned_buffer<double, 32> double_buffer;
 class math
 {
 public:
+    virtual const char* name() = 0;
+
     virtual void copy_buffer(
         float* srcBuffer,
         float* dstBuffer,
@@ -514,17 +516,17 @@ protected:
 
 enum MathFlags
 {
-    AUTODETECT  = 0,
-    
-    FORCE_FPU   = 1,
-    FORCE_MMX   = 2,
-    FORCE_SSE2  = 3,
-    FORCE_SSE3  = 4,
-    FORCE_SSSE3 = 5,
-    FORCE_SSE41 = 6,
-    FORCE_SSE42 = 7,
-    FORCE_AVX   = 8,
-    FORCE_NEON  = 9,
+    AUTODETECT  =  0,
+    FORCE_FPU   =  1,
+    FORCE_MMX   =  2,
+    FORCE_SSE   =  3,
+    FORCE_SSE2  =  4,
+    FORCE_SSE3  =  5,
+    FORCE_SSSE3 =  6,
+    FORCE_SSE41 =  7,
+    FORCE_SSE42 =  8,
+    FORCE_AVX   =  9,
+    FORCE_NEON  = 10,
 };
 
 
@@ -539,9 +541,13 @@ enum MathFlags
 class math_factory
 {
 public:
-    math_factory(int flag=AUTODETECT);
+    math_factory(int flag=AUTODETECT, bool fallback=true);
     ~math_factory();
 
+    // returns the current arch name
+    const char* name();
+
+    // operate on the underlying math object
     forcedinline math* operator->()
     {
         return _math;

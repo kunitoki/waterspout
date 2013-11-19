@@ -4,7 +4,7 @@ ODIR=.
 LDIR=../lib
 
 CXX=g++
-CFLAGS=-march=native -ggdb -I$(IDIR)
+CFLAGS=-ggdb -I$(IDIR) -DDEBUG -march=native
 LIBS=-lm
 
 _DEPS=waterspout.h

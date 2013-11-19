@@ -58,6 +58,7 @@ enum CpuidFeatures
 enum CpuidExtendedFeatures
 {
   SSE3  = 1<< 0, // Streaming SIMD Extension 3
+  SSE4A = 1<< 6, // SSE4A (only for AMD)
   SSSE3 = 1<< 9, // SSSE3
   SSE41 = 1<<19, // SSE41
   SSE42 = 1<<20, // SSE42
@@ -229,449 +230,42 @@ private:
 
 //------------------------------------------------------------------------------
 
-/**
- * FPU math clas that provides floating point operations as fallback
- */
-
-class math_fpu : public math
-{
-public:
-
-    void copy_buffer(
-        float* srcBuffer,
-        float* dstBuffer,
-        uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *dstBuffer++ = *srcBuffer++;
-        }
-    }
-
-    void scale_buffer(
-        float* srcBuffer,
-        uint32_t size,
-        float gain)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *srcBuffer++ *= gain;
-        }
-    }
-
-    void add_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
-        uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-        }
-    }
-
-    void subtract_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
-        uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-        }
-    }
-
-    void multiply_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
-        uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *dstBuffer++ = *srcBufferA++ * *srcBufferB++;
-        }
-    }
-
-    void divide_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
-        uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-          *dstBuffer++ = *srcBufferA++ / *srcBufferB++;
-        }
-    }
-};
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific MMX math class elaborating on __m64 buffers
- */
+#include "math_fpu.h"
 
 #if defined(WATERSPOUT_SIMD_MMX)
-
-class math_mmx : public math_fpu
-{
-public:
-    math_mmx()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_mmx.h"
 #endif
 
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific SSE/SSE2 math class elaborating on __m128 buffers
- */
-
-#if defined(WATERSPOUT_SIMD_SSE) && defined(WATERSPOUT_SIMD_SSE2)
-
-class math_sse2 : public math_fpu
-{
-public:
-
-    void copy_buffer(float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
-
-        if (size < WATERSPOUT_MIN_SSE_SAMPLES ||
-              ((ptrdiff_t)dstBuffer & 0x0F) != align_bytes)
-        {
-            for (int i = 0; i < size; ++i)
-            {
-              dstBuffer[i] = srcBuffer[i];
-            }
-        } 
-        else 
-        { 
-            assert(size >= 4);
-
-            // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1:
-                --size;
-                *dstBuffer++ = *srcBuffer++;
-
-            case 2:
-                --size;
-                *dstBuffer++ = *srcBuffer++;
-
-            case 3:
-                --size;
-                *dstBuffer++ = *srcBuffer++;
-            }  
-
-            // Copy with simd
-            __m128* sourceVector = (__m128*)srcBuffer;
-            __m128* destVector = (__m128*)dstBuffer;
-
-            int vector_count = size >> 2;
-            while (vector_count--)
-            {
-                *destVector = *sourceVector;
-
-                ++destVector;
-                ++sourceVector;
-            }
-
-            // Handle unaligned leftovers
-            dstBuffer = (float*)destVector;
-            srcBuffer = (float*)sourceVector;
-
-            switch (size & 3)
-            {
-            case 3:
-                *dstBuffer++ = *srcBuffer++;
-
-            case 2:
-                *dstBuffer++ = *srcBuffer++;
-
-            case 1:
-                *dstBuffer++ = *srcBuffer++;
-            }  
-        }
-    }
-
-    void scale_buffer(float* srcBuffer, uint32_t size, float gain)
-    {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
-
-        if (size < WATERSPOUT_MIN_SSE_SAMPLES)
-        {
-            for (int i = 0; i < size; ++i)
-            {
-                srcBuffer[i] *= gain;
-                undernormalize(srcBuffer[i]);
-            }
-        } 
-        else
-        {
-            assert(size >= 4);
-      
-            // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1:
-                --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 2:
-                --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            
-            case 3:
-                --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            }
-
-            // Scale with simd
-            const disable_sse_denormals disable_denormals;
-
-            const __m128 vscale =_mm_set1_ps(gain);
-             
-            __m128* vectorBuffer = (__m128*)srcBuffer;
-             
-            int vector_count = size >> 2;
-            while (vector_count--)
-            {
-                *vectorBuffer = _mm_mul_ps(*vectorBuffer, vscale);
-                ++vectorBuffer;
-            }
-             
-            // Handle any unaligned leftovers
-            srcBuffer = (float*)vectorBuffer;
-            
-            switch (size & 3)
-            {
-            case 3:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 2:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            
-            case 1:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            }
-        }
-    }
-
-};
-
+#if defined(WATERSPOUT_SIMD_SSE)
+    #include "math_sse.h"
 #endif
 
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific SSE3 math class
- */
+#if defined(WATERSPOUT_SIMD_SSE2)
+    #include "math_sse2.h"
+#endif
 
 #if defined(WATERSPOUT_SIMD_SSE3)
-
-class math_sse3 : public math_fpu
-{
-public:
-    math_sse3()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_sse3.h"
 #endif
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific SSSE3 math class
- */
 
 #if defined(WATERSPOUT_SIMD_SSSE3)
-
-class math_ssse3 : public math_fpu
-{
-public:
-    math_ssse3()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_ssse3.h"
 #endif
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific SSE41 math class
- */
 
 #if defined(WATERSPOUT_SIMD_SSE41)
-
-class math_sse41 : public math_fpu
-{
-public:
-    math_sse41()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_sse41.h"
 #endif
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific SSE42 math class
- */
 
 #if defined(WATERSPOUT_SIMD_SSE42)
-
-class math_sse42 : public math_fpu
-{
-public:
-    math_sse42()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_sse42.h"
 #endif
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific AVX math class
- */
 
 #if defined(WATERSPOUT_SIMD_AVX)
-
-class math_avx : public math_fpu
-{
-public:
-
-    void copy_buffer(float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
-
-        if (size < WATERSPOUT_MIN_SSE_SAMPLES ||
-              ((ptrdiff_t)dstBuffer & 0x0F) != align_bytes)
-        {
-            for (int i = 0; i < size; ++i)
-            {
-              dstBuffer[i] = srcBuffer[i];
-            }
-        } 
-        else 
-        { 
-            assert(size >= 8);
-
-            // Copy unaligned head
-            switch (align_bytes >> 3)
-            {
-            case 1: --size; *dstBuffer++ = *srcBuffer++;
-            case 2: --size; *dstBuffer++ = *srcBuffer++;
-            case 3: --size; *dstBuffer++ = *srcBuffer++;
-            case 4: --size; *dstBuffer++ = *srcBuffer++;
-            case 5: --size; *dstBuffer++ = *srcBuffer++;
-            case 6: --size; *dstBuffer++ = *srcBuffer++;
-            case 7: --size; *dstBuffer++ = *srcBuffer++;
-            }  
-
-            // Copy with simd
-            __m256* sourceVector = (__m256*)srcBuffer;
-            __m256* destVector = (__m256*)dstBuffer;
-
-            int vector_count = size >> 3;
-            while (vector_count--)
-            {
-                *destVector = *sourceVector;
-
-                ++destVector;
-                ++sourceVector;
-            }
-
-            // Handle unaligned leftovers
-            dstBuffer = (float*)destVector;
-            srcBuffer = (float*)sourceVector;
-
-            switch (size & 7)
-            {
-            case 7: *dstBuffer++ = *srcBuffer++;
-            case 6: *dstBuffer++ = *srcBuffer++;
-            case 5: *dstBuffer++ = *srcBuffer++;
-            case 4: *dstBuffer++ = *srcBuffer++;
-            case 3: *dstBuffer++ = *srcBuffer++;
-            case 2: *dstBuffer++ = *srcBuffer++;
-            case 1: *dstBuffer++ = *srcBuffer++;
-            }  
-        }
-    }
-
-};
-
+    #include "math_avx.h"
 #endif
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
- * Specific NEON math class
- */
 
 #if defined(WATERSPOUT_SIMD_NEON)
-
-class math_neon : public math_fpu
-{
-public:
-    math_neon()
-    {
-        assertfalse; // not implemented !
-    }
-};
-
+    #include "math_neon.h"
 #endif
 
 
@@ -679,9 +273,155 @@ public:
 
 //------------------------------------------------------------------------------
 
-math_factory::math_factory(int flags)
+math_factory::math_factory(int flags, bool fallback)
   : _math(NULL)
 {
+    if (! fallback)
+    {
+#if ! defined(WATERSPOUT_SIMD_AVX)
+        if (flags == FORCE_AVX) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSE42)
+        if (flags == FORCE_SSE42) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSE41)
+        if (flags == FORCE_SSE41) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSSE3)
+        if (flags == FORCE_SSSE3) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSE3)
+        if (flags == FORCE_SSE3) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSE2)
+        if (flags == FORCE_SSE2) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_SSE)
+        if (flags == FORCE_SSE) throw 1;
+#endif
+#if ! defined(WATERSPOUT_SIMD_MMX)
+        if (flags == FORCE_MMX) throw 1;
+#endif
+    }
+    
+#if defined(WATERSPOUT_SYSTEM_ANDROID)
+    if ((android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM &&
+         (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) ||
+         (flags == FORCE_NEON))
+    {
+        _math = new math_neon;
+    }
+
+#else
+    {
+        static uint32_t features = cpuid_features();
+        static uint32_t features_ext = cpuid_extended_features();
+
+        if (0)
+        {
+            // placeholder do nothing !
+        }
+    
+    #if defined(WATERSPOUT_SIMD_AVX)
+        else if ((features_ext & AVX)
+            && flags != FORCE_SSE42
+            && flags != FORCE_SSE41
+            && flags != FORCE_SSSE3
+            && flags != FORCE_SSE3
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_avx;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSE42)
+        else if ((features_ext & SSE42)
+            && flags != FORCE_SSE41
+            && flags != FORCE_SSSE3
+            && flags != FORCE_SSE3
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_sse42;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSE41)
+        else if ((features_ext & SSE41)
+            && flags != FORCE_SSSE3
+            && flags != FORCE_SSE3
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_sse41;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSSE3)
+        else if ((features_ext & SSSE3)
+            && flags != FORCE_SSE3
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_ssse3;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSE3)
+        else if ((features_ext & SSE3)
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_sse3;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSE2)
+        else if ((features & SSE2)
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_sse2;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_SSE)
+        else if ((features & SSE)
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            _math = new math_sse;
+        }
+    #endif
+
+    #if defined(WATERSPOUT_SIMD_MMX)
+        else if ((features & MMX)
+            && flags != FORCE_FPU)
+        {
+            _math = new math_mmx;
+        }
+    #endif
+
+        else // if ((features & FPU) || flags == FORCE_FPU)
+        {
+            _math = new math_fpu;
+        }
+    }
+#endif
+
+
 #if defined(WATERSPOUT_DEBUG)
     char procname[13];
     cpuid_procname(procname);
@@ -691,151 +431,39 @@ math_factory::math_factory(int flags)
 
     std::cout << "Processor features:" << std::endl;
     std::cout << "  FPU   = " << std::boolalpha << (bool)(cpuid_features() & FPU  ) << std::endl;
-    std::cout << "  MMX   = " << std::boolalpha << (bool)(cpuid_features() & MMX  ) << std::endl;
-    std::cout << "  SSE   = " << std::boolalpha << (bool)(cpuid_features() & SSE  ) << std::endl;
-    std::cout << "  SSE2  = " << std::boolalpha << (bool)(cpuid_features() & SSE2 ) << std::endl;
-    std::cout << "  SSE3  = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE3) << std::endl;
-    std::cout << "  SSSE3 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSSE3 ) << std::endl;
-    std::cout << "  SSE41 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE41 ) << std::endl;
-    std::cout << "  SSE42 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE42 ) << std::endl;
-    std::cout << "  AVX   = " << std::boolalpha << (bool)(cpuid_extended_features() & AVX ) << std::endl;
-#endif
+    #if defined(WATERSPOUT_SIMD_MMX)
+        std::cout << "  MMX   = " << std::boolalpha << (bool)(cpuid_features() & MMX  ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE)
+        std::cout << "  SSE   = " << std::boolalpha << (bool)(cpuid_features() & SSE  ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE2)
+        std::cout << "  SSE2  = " << std::boolalpha << (bool)(cpuid_features() & SSE2 ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE3)
+        std::cout << "  SSE3  = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE3) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSSE3)
+        std::cout << "  SSSE3 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSSE3 ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE41)
+        std::cout << "  SSE41 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE41 ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE42)
+        std::cout << "  SSE42 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE42 ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE4A)
+        std::cout << "  SSE4A = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE4A ) << std::endl;
+    #endif
+    #if defined(WATERSPOUT_SIMD_AVX)
+        std::cout << "  AVX   = " << std::boolalpha << (bool)(cpuid_extended_features() & AVX ) << std::endl;
+    #endif
 
-#if defined(WATERSPOUT_SYSTEM_ANDROID)
-    if ((android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM &&
-         (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) || flags == FORCE_NEON)
+    if (_math != NULL)
     {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled NEON" << std::endl;
-        #endif
-
-        _math = new math_neon;
-
-        return;
+        std::cout << "Enabled " << _math->name() << std::endl;
     }
 #endif
-
-    uint32_t features = cpuid_features();
-    uint32_t features_ext = cpuid_extended_features();
-
-    if (0)
-    {
-        // placeholder do nothing !
-    }
-    
-#if defined(WATERSPOUT_SIMD_AVX)
-    else if ((features_ext & AVX)
-        && flags != FORCE_SSE42
-        && flags != FORCE_SSE41
-        && flags != FORCE_SSSE3
-        && flags != FORCE_SSE3
-        && flags != FORCE_SSE2
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled AVX" << std::endl;
-        #endif
-
-        _math = new math_avx;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_SSE42)
-    else if ((features_ext & SSE42)
-        && flags != FORCE_SSE41
-        && flags != FORCE_SSSE3
-        && flags != FORCE_SSE3
-        && flags != FORCE_SSE2
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled SSE42" << std::endl;
-        #endif
-
-        _math = new math_sse42;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_SSE41)
-    else if ((features_ext & SSE41)
-        && flags != FORCE_SSSE3
-        && flags != FORCE_SSE3
-        && flags != FORCE_SSE2
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled SSE41" << std::endl;
-        #endif
-
-        _math = new math_sse41;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_SSSE3)
-    else if ((features_ext & SSSE3)
-        && flags != FORCE_SSE3
-        && flags != FORCE_SSE2
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled SSSE3" << std::endl;
-        #endif
-
-        _math = new math_ssse3;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_SSE3)
-    else if ((features_ext & SSE3)
-        && flags != FORCE_SSE2
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled SSE3" << std::endl;
-        #endif
-
-        _math = new math_sse3;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_SSE) && defined(WATERSPOUT_SIMD_SSE2)
-    else if ((features & SSE) && (features & SSE2)
-        && flags != FORCE_MMX
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled SSE/SSE2" << std::endl;
-        #endif
-        
-        _math = new math_sse2;
-    }
-#endif
-
-#if defined(WATERSPOUT_SIMD_MMX)
-    else if ((features & MMX)
-        && flags != FORCE_FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled MMX" << std::endl;
-        #endif
-
-        _math = new math_mmx;
-    }
-#endif
-
-    else // if (features & FPU)
-    {
-        #if defined(WATERSPOUT_DEBUG)
-            std::cout << "Enabled FPU" << std::endl;
-        #endif
-
-        _math = new math_fpu;
-    }
 }
 
 
@@ -847,6 +475,19 @@ math_factory::~math_factory()
     {
         delete _math;
     }
+}
+
+
+//------------------------------------------------------------------------------
+
+const char* math_factory::name()
+{
+    if (_math != NULL)
+    {
+        return _math->name();
+    }
+
+    return "";
 }
 
 
