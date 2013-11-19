@@ -22,23 +22,22 @@ even old CPUs.
 Usage
 -----
 
-`
-#include <waterspout.h>
+    #include <waterspout.h>
 
-int main(int argc, char* argv[])
-{
-  waterspout::math_factory m;
-  waterspout::float_buffer bufferA(100), bufferB(100);
+    int main(int argc, char* argv[])
+    {
+      waterspout::math_factory m;
+      waterspout::float_buffer bufferA(100), bufferB(100);
 
-  for (int i = 0; i < bufferA.size(); ++i)
-  {
-    bufferA[i] = i / 100.0f;
-    bufferB[i] = 0.0f;
-  }
+      for (int i = 0; i < bufferA.size(); ++i)
+      {
+        bufferA[i] = i / 100.0f;
+        bufferB[i] = 0.0f;
+      }
 
-  m->copy_buffer(bufferA.data(), bufferB.data(), 100);
-}
-`
+      m->copy_buffer(bufferA.data(), bufferB.data(), 100);
+    }
+
 
 References
 ----------
