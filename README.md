@@ -1,5 +1,5 @@
 waterspout
-=========
+==========
 
 [![Build Status](https://api.travis-ci.org/kunitoki/waterspout.png)](https://travis-ci.org/kunitoki/waterspout)
 
@@ -19,8 +19,29 @@ the software FPU fallback it's possible to run the same code on different and
 even old CPUs.
 
 
+Usage
+-----
+
+`
+#include <waterspout.h>
+
+int main(int argc, char* argv[])
+{
+  waterspout::math_factory m;
+  waterspout::float_buffer bufferA(100), bufferB(100);
+
+  for (int i = 0; i < bufferA.size(); ++i)
+  {
+    bufferA[i] = i / 100.0f;
+    bufferB[i] = 0.0f;
+  }
+
+  m->copy_buffer(bufferA.data(), bufferB.data(), 100);
+}
+`
+
 References
----------
+----------
 
 All intrinsics:
   * http://software.intel.com/sites/products/documentation/studio/composer/en-us/2011Update/compiler_c/intref_cls/common/intref_bk_intrinsics.htm
