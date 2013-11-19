@@ -1,3 +1,4 @@
 language: cpp
 
-script: "cd ./test && make && ./test"
+script:
+    - cd ./test && make && ./test
