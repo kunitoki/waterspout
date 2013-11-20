@@ -28,139 +28,220 @@
  */
 
 #include <waterspout.h>
-#include <iostream>
 
+#include <ctime>
+#include <iostream>
+#include <iomanip>
+
+
+using namespace waterspout;
+
+
+//==============================================================================
 
 //------------------------------------------------------------------------------
 
-using namespace waterspout;
+/**
+ * The timer class to measure elapsed time and benchmarking
+ */
+
+class timer : private noncopyable
+{
+public:
+    timer()
+    {
+        restart();
+    }
+
+    virtual ~timer()
+    {
+    }
+
+    void restart()
+    {
+        stopped_ = false;
+        clock_start_ = time_now();
+        cpu_start_ = clock();
+    }
+
+    virtual void stop()
+    {
+        stopped_ = true;
+        cpu_end_ = clock();
+        clock_end_ = time_now();
+    }
+
+    double cpu_elapsed()
+    {
+        // return elapsed CPU time in ms
+        if (! stopped_)
+        {
+            stop();
+        }
+
+        return ((double)(cpu_end_ - cpu_start_)) / CLOCKS_PER_SEC * 1000.0;
+    }
+
+    double clock_elapsed()
+    {
+        // return elapsed wall clock time in ms
+        if (! stopped_)
+        {
+            stop();
+        }
+
+        return (clock_end_ - clock_start_) * 1000.0;
+    }
+
+protected:
+    double clock_start_, clock_end_;
+    clock_t cpu_start_, cpu_end_;
+    bool stopped_;
+};
 
 
 //------------------------------------------------------------------------------
 
 namespace {
 
-    static const uint32_t num_runs = 50;
 
-    void prepare_buffers(float* a, float* b, uint32_t size)
+static const uint32_t num_runs = 25;
+
+
+//------------------------------------------------------------------------------
+
+void prepare_buffers(float* a, float* b, uint32_t size)
+{
+    for (int i = 0; i < size; ++i)
     {
-        for (int i = 0; i < size; ++i)
+        a[i] = i / (float)size;
+        b[i] = 0.0f;
+    }
+}
+
+
+//------------------------------------------------------------------------------
+
+void check_buffers(const math& factory, float* a, float* b, uint32_t size)
+{
+    for (int i = 0; i < size; ++i)
+    {
+        if (a[i] != b[i])
         {
-            a[i] = i / (float)size;
-            b[i] = 0.0f;
+            std::cout << factory.name() << ": Copy is invalid !" << std::endl;
         }
     }
+}
 
-    void check_buffers(const math_factory& factory, float* a, float* b, uint32_t size)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-            if (a[i] != b[i])
-            {
-                WATERSPOUT_LOG_INFO(test) << factory.name() << ": Copy is invalid !";
-            }
-        }
-    }
 
-    double measure_buffer_clear(const math_factory& factory, float* srcBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->clear_buffer(srcBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+//------------------------------------------------------------------------------
 
-    double measure_buffer_scale(const math_factory& factory, float* srcBuffer, uint32_t size, float gain)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->scale_buffer(srcBuffer, size, gain);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffer_clear(const math& factory, float* srcBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->clear_buffer(srcBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    double measure_buffer_copy(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->copy_buffer(srcBuffer, dstBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffer_scale(const math& factory, float* srcBuffer, uint32_t size, float gain)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->scale_buffer(srcBuffer, size, gain);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    double measure_buffers_add(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->add_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffer_copy(const math& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->copy_buffer(srcBuffer, dstBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    double measure_buffers_subtract(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->subtract_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffers_add(const math& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->add_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    double measure_buffers_multiply(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->multiply_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffers_subtract(const math& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->subtract_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    double measure_buffers_divide(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
-    {
-        timer t;
-        for (int i = 0; i < num_runs; ++i)
-            factory->divide_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed() / (double)num_runs;
-    }
+double measure_buffers_multiply(const math& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->multiply_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    void print_elapsed(const math_factory& factory, const char* function, double elapsed)
-    {
-        WATERSPOUT_LOG_INFO(test)
-            << factory.name() << "(" << function << "): "
-            << std::setprecision(32) << elapsed << " ms";
-    }
+double measure_buffers_divide(const math& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->divide_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
 
-    void run_all(const math_factory& factory, float_buffer& srcBuffer, float_buffer& dstBuffer)
-    {
-        double elapsed = 0.0;
 
-        prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+//------------------------------------------------------------------------------
 
-        elapsed =
-          measure_buffer_clear(factory, srcBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "clear_buffer", elapsed);
+void print_elapsed(const math& factory, const char* function, double elapsed)
+{
+    std::cout
+        << factory.name() << "(" << function << "): "
+        << std::setprecision(32) << elapsed << " ms" << std::endl;
+}
 
-        elapsed =
-          measure_buffer_scale(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
-        print_elapsed(factory, "scale_buffer", elapsed);
 
-        elapsed =
-          measure_buffer_copy(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "copy_buffer", elapsed);
+//------------------------------------------------------------------------------
 
-        elapsed =
-          measure_buffers_add(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "add_buffers", elapsed);
+void run_all(const math& factory, float_buffer& srcBuffer, float_buffer& dstBuffer)
+{
+    double elapsed = 0.0;
 
-        elapsed =
-          measure_buffers_subtract(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "subtract_buffers", elapsed);
+    prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
 
-        elapsed =
-          measure_buffers_multiply(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "multiply_buffers", elapsed);
+    elapsed =
+      measure_buffer_clear(factory, srcBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "clear_buffer", elapsed);
 
-        elapsed =
-          measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        print_elapsed(factory, "divide_buffers", elapsed);
+    elapsed =
+      measure_buffer_scale(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
+    print_elapsed(factory, "scale_buffer", elapsed);
 
-        WATERSPOUT_LOG_INFO(test) << "";
-    }
+    elapsed =
+      measure_buffer_copy(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "copy_buffer", elapsed);
+
+    elapsed =
+      measure_buffers_add(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "add_buffers", elapsed);
+
+    elapsed =
+      measure_buffers_subtract(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "subtract_buffers", elapsed);
+
+    elapsed =
+      measure_buffers_multiply(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "multiply_buffers", elapsed);
+
+    elapsed =
+      measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    print_elapsed(factory, "divide_buffers", elapsed);
+
+    std::cout << std::endl;
+}
+
 
 } // end namespace
 
@@ -169,23 +250,18 @@ namespace {
 
 int main(int argc, char* argv[])
 {
-    const uint32_t size = 1024 * 1024;
-
-    scoped_ptr<int> ptr(new int);
-    ptr = new int;
+    const uint32_t size = 16384;
 
     float_buffer srcBuffer(size);
     float_buffer dstBuffer(size);
 
-    run_all(math_factory(FORCE_FPU), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_MMX), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSE), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSE2), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSE3), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSSE3), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSE41), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_SSE42), srcBuffer, dstBuffer);
-    run_all(math_factory(FORCE_AVX), srcBuffer, dstBuffer);
-    
-    return 0;
+    run_all(math(FORCE_FPU), srcBuffer, dstBuffer);
+    run_all(math(FORCE_MMX), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSE), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSE2), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSE3), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSSE3), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSE41), srcBuffer, dstBuffer);
+    run_all(math(FORCE_SSE42), srcBuffer, dstBuffer);
+    run_all(math(FORCE_AVX), srcBuffer, dstBuffer);
 }

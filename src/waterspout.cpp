@@ -28,8 +28,539 @@
 
 #include <waterspout.h>
 
+#include <cstdlib>
+#include <stdexcept>
+
+#include <memory>
+#include <iostream>
+#include <sstream>
+#include <ostream>
+#include <fstream>
+
+#include <string>
+#include <map>
+
 
 namespace waterspout {
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+/**
+ * Singleton class
+ */
+
+template <typename T>
+class create_using_new_
+{
+public:
+    static T* create()
+    {
+        return new T;
+    }
+
+    static void destroy(T* obj)
+    {
+        delete obj;
+    }
+};
+
+template <typename T>
+class create_static_
+{
+private:
+    union max_align
+    {
+        char t_[sizeof(T)];
+        short int short_int_;
+        int int_;
+        long int long_int_;
+        float float_;
+        double double_;
+        long double long_double_;
+        struct test_struct;
+        int test_struct::*ptr_member_;
+        int (test_struct::*ptr_nember_func_)(int);
+    };
+
+public:
+    static T* create()
+    {
+        static max_align static_memory;
+
+        return new(&static_memory) T;
+    }
+
+#if defined(WATERSPOUT_COMPILER_SUN)
+    // Sun C++ Compiler doesn't handle `volatile` keyword same as GCC.
+    static void destroy(T* obj)
+#else
+    static void destroy(volatile T* obj)
+#endif
+    {
+        obj->~T();
+    }
+};
+
+template <typename T,
+          template <typename U> class create_policy=create_static_> class singleton
+{
+#if defined(WATERSPOUT_COMPILER_SUN)
+    // Sun's C++ compiler will issue the following errors if create_policy<T> is used:
+    // Error: A class template name was expected instead of waterspout::create_policy<waterspout::T>
+    // Error: A "friend" declaration must specify a class or function.
+    friend class create_policy;
+#else
+    friend class create_policy<T>;
+#endif
+
+    static T* ptr_instance_;
+    static bool destroyed_;
+
+    singleton(const singleton &rhs);
+    singleton& operator=(const singleton&);
+
+    static void on_dead_reference()
+    {
+        throw std::runtime_error("singleton: dead reference !");
+    }
+
+    static void destroy_singleton()
+    {
+        create_policy<T>::destroy(ptr_instance_);
+        ptr_instance_ = 0;
+        destroyed_ = true;
+    }
+
+protected:
+    singleton() {}
+
+public:
+    static T& instance()
+    {
+        if (! ptr_instance_)
+        {
+            if (! ptr_instance_)
+            {
+                if (destroyed_)
+                {
+                    destroyed_ = false;
+                    on_dead_reference();
+                }
+                else
+                {
+                    ptr_instance_ = create_policy<T>::create();
+
+                    // register destruction
+                    std::atexit(&destroy_singleton);
+                }
+            }
+        }
+        return *ptr_instance_;
+    }
+};
+
+template <typename T,
+          template <typename U> class create_policy>
+T* singleton<T, create_policy>::ptr_instance_ = NULL;
+
+template <typename T,
+          template <typename U> class create_policy>
+bool singleton<T, create_policy>::destroyed_ = false;
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+#ifndef WATERSPOUT_LOG_FORMAT
+  //#define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
+  #define WATERSPOUT_LOG_FORMAT  Waterspout LOG>
+#endif
+
+#ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
+  #ifdef WATERSPOUT_DEBUG
+    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 0
+  #else
+    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 2
+  #endif
+#endif
+
+
+//------------------------------------------------------------------------------
+
+namespace logger_detail_ {
+
+    /*
+     * The main logger class
+     */
+    class logger :
+        public singleton<logger>,
+        private noncopyable
+    {
+    public:
+        enum severity_type
+        {
+            debug = 0,
+            warn = 1,
+            error = 2,
+            info = 3,
+            none = 4
+        };
+
+        typedef std::map<std::string, severity_type> severity_map;
+
+        // global security level
+        static severity_type get_severity()
+        {
+            return severity_level_;
+        }
+
+        static void set_severity(const severity_type& severity_level)
+        {
+            severity_level_ = severity_level;
+        }
+
+        // per object security levels
+        static severity_type get_object_severity(std::string const& object_name)
+        {
+            severity_map::iterator it = object_severity_level_.find(object_name);
+            if (object_name.empty() || it == object_severity_level_.end())
+            {
+                return severity_level_;
+            }
+            else
+            {
+                return it->second;
+            }
+        }
+
+        static void set_object_severity(std::string const& object_name,
+                                        const severity_type& security_level)
+        {
+            if (! object_name.empty())
+            {
+                object_severity_level_[object_name] = security_level;
+            }
+        }
+
+        static void clear_object_severity()
+        {
+            object_severity_level_.clear();
+        }
+
+        // format
+        static std::string get_format()
+        {
+            return format_;
+        }
+
+        static void set_format(std::string const& format)
+        {
+            format_ = format;
+        }
+
+        // interpolate the format string for output
+        static std::string str()
+        {
+            // update the format from getenv if this is the first time
+            if (logger::format_env_check_)
+            {
+                logger::format_env_check_ = false;
+
+                const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
+                if (log_format != NULL)
+                {
+                    logger::format_ = log_format;
+                }
+            }
+
+            char buf[256];
+            const time_t tm = time(0);
+            strftime(buf, sizeof(buf), logger::format_.c_str(), localtime(&tm));
+            return buf;
+        }
+
+        // output
+        static void use_file(std::string const& filepath)
+        {
+            // save clog rdbuf
+            if (saved_buf_ == 0)
+            {
+                saved_buf_ = std::clog.rdbuf();
+            }
+
+            // use a file to output as clog rdbuf
+            if (file_name_ != filepath)
+            {
+                file_name_ = filepath;
+
+                if (file_output_.is_open())
+                {
+                    file_output_.close();
+                }
+
+                file_output_.open(file_name_.c_str(), std::ios::out | std::ios::app);
+                if (file_output_)
+                {
+                    std::clog.rdbuf(file_output_.rdbuf());
+                }
+                else
+                {
+                    std::stringstream s;
+                    s << "logger: cannot redirect log to file " << file_output_;
+                    throw std::runtime_error(s.str());
+                }
+            }
+        }
+
+        static void use_console()
+        {
+            // save clog rdbuf
+            if (saved_buf_ == 0)
+            {
+                saved_buf_ = std::clog.rdbuf();
+            }
+
+            // close the file to force a flush
+            if (file_output_.is_open())
+            {
+                file_output_.close();
+            }
+
+            std::clog.rdbuf(saved_buf_);
+        }
+
+    private:
+        static severity_type severity_level_;
+        static severity_map object_severity_level_;
+        static bool severity_env_check_;
+
+        static std::string format_;
+        static bool format_env_check_;
+
+        static std::ofstream file_output_;
+        static std::string file_name_;
+        static std::streambuf* saved_buf_;
+    };
+
+    bool logger::severity_env_check_ = true;
+    bool logger::format_env_check_ = true;
+
+    logger::severity_type logger::severity_level_ =
+        #if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
+            logger::debug
+        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 1
+            logger::warn
+        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 2
+            logger::error
+        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 3
+            logger::info
+        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 4
+            logger::none
+        #else
+            #error "Wrong default log severity level specified!"
+        #endif
+    ;
+
+    logger::severity_map logger::object_severity_level_ = logger::severity_map();
+
+    #define __xstr__(s) __str__(s)
+    #define __str__(s) #s
+    std::string logger::format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
+    #undef __xstr__
+    #undef __str__
+
+    std::ofstream logger::file_output_;
+    std::string logger::file_name_;
+    std::streambuf* logger::saved_buf_ = 0;
+
+
+    /*
+     * Default sink, it regulates access to clog
+     */
+    template<class Ch, class Tr, class A>
+    class clog_sink
+    {
+    public:
+        typedef std::basic_ostringstream<Ch, Tr, A> stream_buffer;
+
+        void operator()(const logger::severity_type& severity, const stream_buffer &s)
+        {
+            std::clog << logger::str() << " " << s.str() << std::endl;
+        }
+    };
+
+
+    /*
+     * Base log class, should not log anything when WATERSPOUT_VOID_LOGGING is defined
+     *
+     * This is used for debug/warn reporting that should not output
+     * anything when not compiling for speed.
+     */
+    template<template <class Ch, class Tr, class A> class OutputPolicy,
+             logger::severity_type Severity,
+             bool BypassSeverityCheck = false,
+             class Ch = char,
+             class Tr = std::char_traits<Ch>,
+             class A = std::allocator<Ch> >
+    class base_log : public noncopyable
+    {
+    public:
+        typedef OutputPolicy<Ch, Tr, A> output_policy;
+
+        base_log() {}
+
+        base_log(const char* object_name)
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            if (object_name != NULL)
+            {
+                object_name_ = object_name;
+            }
+#endif
+        }
+
+        ~base_log()
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            if (BypassSeverityCheck || check_severity())
+            {
+                output_policy()(Severity, streambuf_);
+            }
+#endif
+        }
+
+        template<class T>
+        base_log &operator<<(const T &x)
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            streambuf_ << x;
+#endif
+            return *this;
+        }
+
+    private:
+#if !defined(WATERSPOUT_VOID_LOGGING)
+        inline bool check_severity()
+        {
+            return Severity >= logger::get_object_severity(object_name_);
+        }
+
+        typename output_policy::stream_buffer streambuf_;
+        std::string object_name_;
+#endif
+    };
+
+
+    /*
+     * Base log class that always log, regardless of WATERSPOUT_VOID_LOGGING.
+     *
+     * This is used for error reporting that should always log something
+     */
+    template<template <class Ch, class Tr, class A> class OutputPolicy,
+             logger::severity_type Severity,
+             bool BypassSeverityCheck = false,
+             class Ch = char,
+             class Tr = std::char_traits<Ch>,
+             class A = std::allocator<Ch> >
+    class base_log_always : public noncopyable
+    {
+    public:
+        typedef OutputPolicy<Ch, Tr, A> output_policy;
+
+        base_log_always() {}
+
+        base_log_always(const char* object_name)
+        {
+            if (object_name != NULL)
+            {
+                object_name_ = object_name;
+            }
+        }
+
+        ~base_log_always()
+        {
+            if (BypassSeverityCheck || check_severity())
+            {
+                output_policy()(Severity, streambuf_);
+            }
+        }
+
+        template<class T>
+        base_log_always &operator<<(const T &x)
+        {
+            streambuf_ << x;
+            return *this;
+        }
+
+    private:
+        inline bool check_severity()
+        {
+            return Severity >= logger::get_object_severity(object_name_);
+        }
+
+        typename output_policy::stream_buffer streambuf_;
+        std::string object_name_;
+    };
+
+
+    /*
+     * Real classes used in the code
+     */
+    typedef base_log<clog_sink, logger::debug> base_log_debug;
+    typedef base_log<clog_sink, logger::warn> base_log_warn;
+    typedef base_log_always<clog_sink, logger::error> base_log_error;
+    typedef base_log_always<clog_sink, logger::info, true> base_log_info;
+
+    class debug : public logger_detail_::base_log_debug {
+    public:
+        debug() : logger_detail_::base_log_debug() {}
+        debug(const char* object_name)
+            : logger_detail_::base_log_debug(object_name) {}
+    };
+
+    class warn : public logger_detail_::base_log_warn {
+    public:
+        warn() : logger_detail_::base_log_warn() {}
+        warn(const char* object_name)
+            : logger_detail_::base_log_warn(object_name) {}
+    };
+
+    class error : public logger_detail_::base_log_error {
+    public:
+        error() : logger_detail_::base_log_error() {}
+        error(const char* object_name)
+            : logger_detail_::base_log_error(object_name) {}
+    };
+
+    class info : public logger_detail_::base_log_info {
+    public:
+        info() : logger_detail_::base_log_info() {}
+        info(const char* object_name)
+            : logger_detail_::base_log_info(object_name) {}
+    };
+
+} // end namespace logger_detail_
+
+
+//------------------------------------------------------------------------------
+
+/**
+ * Logging helpers
+ */
+
+typedef logger_detail_::debug logger_debug;
+typedef logger_detail_::warn logger_warn;
+typedef logger_detail_::error logger_error;
+typedef logger_detail_::info logger_info;
+
+#define WATERSPOUT_LOG_DEBUG(s) waterspout::logger_debug(#s)
+#define WATERSPOUT_LOG_WARN(s) waterspout::logger_warn(#s)
+#define WATERSPOUT_LOG_ERROR(s) waterspout::logger_error(#s)
+#define WATERSPOUT_LOG_INFO(s) waterspout::logger_info(#s)
 
 
 //==============================================================================
@@ -190,190 +721,32 @@ uint32_t cpu_endianness()
 
 //------------------------------------------------------------------------------
 
-struct disable_sse_denormals
+void* memory::aligned_alloc(uint32_t size_bytes, uint32_t alignment_bytes)
 {
-  disable_sse_denormals()
-  {
-    disable_floating_point_assertions
-
-    old_mxcsr_ = _mm_getcsr();
-  
-    static const uint32_t caps = cpu_features();
-
-    if (caps & SSE2)
-    {
-      if ((old_mxcsr_ & 0x8040) == 0) // set DAZ and FZ bits...
-      {
-        _mm_setcsr(old_mxcsr_ | 0x8040);
-      }
-    }
-    else
-    {
-      assert(caps & SSE); // Expected at least sse 1
-
-      if ((old_mxcsr_ & 0x8000) == 0) // set DAZ bit...
-      {
-        _mm_setcsr(old_mxcsr_ | 0x8000);
-      }
-    }
-  }
-  
-  ~disable_sse_denormals()
-  {
-    if (old_mxcsr_ != 0)
-    {
-      _mm_setcsr(old_mxcsr_);
-    }
-
-    enable_floating_point_assertions
-  }
-
-private:
-  int old_mxcsr_;
-};
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-namespace logger_detail_ {
-
-
-//------------------------------------------------------------------------------
-
-#ifndef WATERSPOUT_LOG_FORMAT
-  //#define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
-  #define WATERSPOUT_LOG_FORMAT  Waterspout LOG>
+#if defined(WATERSPOUT_COMPILER_MSVC)
+    return (void*)::_aligned_malloc(size_bytes, alignment_bytes);
+#elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+    void* ptr;
+    if (::posix_memalign(&ptr, alignment_bytes, size_bytes) == 0);
+    return ptr;
+#else
+    return (void*)::malloc(size_bytes);
 #endif
-
-#ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
-  #ifdef WATERSPOUT_DEBUG
-    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 0
-  #else
-    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 2
-  #endif
-#endif
-
-
-//------------------------------------------------------------------------------
-
-bool logger::severity_env_check_ = true;
-bool logger::format_env_check_ = true;
-
-
-//------------------------------------------------------------------------------
-
-logger::severity_type logger::severity_level_ =
-    #if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
-        logger::debug
-    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 1
-        logger::warn
-    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 2
-        logger::error
-    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 3
-        logger::none
-    #else
-        #error "Wrong default log severity level specified!"
-    #endif
-;
-
-//logger::severity_map logger::object_severity_level_ = logger::severity_map();
-
-
-//------------------------------------------------------------------------------
-
-#define __xstr__(s) __str__(s)
-#define __str__(s) #s
-std::string logger::format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
-#undef __xstr__
-#undef __str__
-
-std::string logger::str()
-{
-#if 0
-    // update the format from getenv if this is the first time
-    if (logger::format_env_check_)
-    {
-        logger::format_env_check_ = false;
-
-        const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
-        if (log_format != NULL)
-        {
-            logger::format_ = log_format;
-        }
-    }
-#endif
-
-    char buf[256];
-    const time_t tm = time(0);
-    strftime(buf, sizeof(buf), logger::format_.c_str(), localtime(&tm));
-    return buf;
 }
 
 
 //------------------------------------------------------------------------------
 
-std::ofstream logger::file_output_;
-std::string logger::file_name_;
-std::streambuf* logger::saved_buf_ = 0;
-
-
-//------------------------------------------------------------------------------
-
-void logger::use_file(std::string const& filepath)
+void memory::aligned_free(void* ptr)
 {
-    // save clog rdbuf
-    if (saved_buf_ == 0)
-    {
-        saved_buf_ = std::clog.rdbuf();
-    }
-
-    // use a file to output as clog rdbuf
-    if (file_name_ != filepath)
-    {
-        file_name_ = filepath;
-
-        if (file_output_.is_open())
-        {
-            file_output_.close();
-        }
-
-        file_output_.open(file_name_.c_str(), std::ios::out | std::ios::app);
-        if (file_output_)
-        {
-            std::clog.rdbuf(file_output_.rdbuf());
-        }
-        else
-        {
-            std::stringstream s;
-            s << "logger: cannot redirect log to file " << file_output_;
-            throw std::runtime_error(s.str());
-        }
-    }
+#if defined(WATERSPOUT_COMPILER_MSVC)
+    ::_aligned_free(ptr);
+#elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+    ::free(ptr);
+#else
+    ::free(ptr);
+#endif
 }
-
-//------------------------------------------------------------------------------
-
-void logger::use_console()
-{
-    // save clog rdbuf
-    if (saved_buf_ == 0)
-    {
-        saved_buf_ = std::clog.rdbuf();
-    }
-
-    // close the file to force a flush
-    if (file_output_.is_open())
-    {
-        file_output_.close();
-    }
-
-    std::clog.rdbuf(saved_buf_);
-}
-
-
-} // end namespace logger_detail_
 
 
 //==============================================================================
@@ -423,8 +796,8 @@ void logger::use_console()
 
 //------------------------------------------------------------------------------
 
-math_factory::math_factory(int flags, bool fallback)
-  : math_(NULL)
+math::math(int flags, bool fallback)
+  : math_implementation_(NULL)
 {
     if (! fallback)
     {
@@ -467,7 +840,7 @@ math_factory::math_factory(int flags, bool fallback)
          (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) ||
          (flags == FORCE_NEON))
     {
-        math_ = new math_neon;
+        math_implementation_ = new math_neon;
     }
 
 #else
@@ -491,7 +864,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_avx;
+            math_implementation_ = new math_avx;
         }
     #endif
 
@@ -505,7 +878,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_sse42;
+            math_implementation_ = new math_sse42;
         }
     #endif
 
@@ -518,7 +891,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_sse41;
+            math_implementation_ = new math_sse41;
         }
     #endif
 
@@ -530,7 +903,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_ssse3;
+            math_implementation_ = new math_ssse3;
         }
     #endif
 
@@ -541,7 +914,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_sse3;
+            math_implementation_ = new math_sse3;
         }
     #endif
 
@@ -551,7 +924,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_sse2;
+            math_implementation_ = new math_sse2;
         }
     #endif
 
@@ -560,7 +933,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_ = new math_sse;
+            math_implementation_ = new math_sse;
         }
     #endif
 
@@ -568,13 +941,13 @@ math_factory::math_factory(int flags, bool fallback)
         else if ((features & MMX)
             && flags != FORCE_FPU)
         {
-            math_ = new math_mmx;
+            math_implementation_ = new math_mmx;
         }
     #endif
 
         else // if ((features & FPU) || flags == FORCE_FPU)
         {
-            math_ = new math_fpu;
+            math_implementation_ = new math_fpu;
         }
     }
 #endif
@@ -628,10 +1001,10 @@ math_factory::math_factory(int flags, bool fallback)
             << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX);
     #endif
 
-    if (math_ != NULL)
+    if (math_implementation_ != NULL)
     {
         WATERSPOUT_LOG_DEBUG(math_factory)
-            << "Enabled " << math_->name() << instructions;
+            << "Enabled " << math_implementation_->name() << instructions;
     }
 #endif
 }
@@ -639,18 +1012,18 @@ math_factory::math_factory(int flags, bool fallback)
 
 //------------------------------------------------------------------------------
 
-math_factory::~math_factory()
+math::~math()
 {
 }
 
 
 //------------------------------------------------------------------------------
 
-const char* math_factory::name() const
+const char* math::name() const
 {
-    if (math_ != NULL)
+    if (math_implementation_ != NULL)
     {
-        return math_->name();
+        return math_implementation_->name();
     }
 
     return "";

@@ -31,13 +31,14 @@ Usage
 
 int main(int argc, char* argv[])
 {
-  waterspout::math_factory m;
+  waterspout::math m;
   waterspout::float_buffer bufferA(100), bufferB(100);
 
+  m->clear_buffer(bufferB.data(), 100);
+  
   for (int i = 0; i < bufferA.size(); ++i)
   {
     bufferA[i] = i / 100.0f;
-    bufferB[i] = 0.0f;
   }
 
   m->copy_buffer(bufferA.data(), bufferB.data(), 100);

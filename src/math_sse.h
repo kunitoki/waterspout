@@ -30,6 +30,55 @@
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE_H__
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE_H__
 
+#include <xmmintrin.h> // SSE
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+struct disable_sse_denormals
+{
+  disable_sse_denormals()
+  {
+    disable_floating_point_assertions
+
+    old_mxcsr_ = _mm_getcsr();
+
+    static const uint32_t caps = cpu_features();
+
+    if (caps & SSE2)
+    {
+      if ((old_mxcsr_ & 0x8040) == 0) // set DAZ and FZ bits...
+      {
+        _mm_setcsr(old_mxcsr_ | 0x8040);
+      }
+    }
+    else
+    {
+      assert(caps & SSE); // Expected at least sse 1
+
+      if ((old_mxcsr_ & 0x8000) == 0) // set DAZ bit...
+      {
+        _mm_setcsr(old_mxcsr_ | 0x8000);
+      }
+    }
+  }
+
+  ~disable_sse_denormals()
+  {
+    if (old_mxcsr_ != 0)
+    {
+      _mm_setcsr(old_mxcsr_);
+    }
+
+    enable_floating_point_assertions
+  }
+
+private:
+  int old_mxcsr_;
+};
+
 
 //==============================================================================
 

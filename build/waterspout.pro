@@ -12,16 +12,16 @@ OBJECTS_DIR = $$DESTDIR/temp
 
 HEADERS += \
   $$INCLUDEDIR/waterspout.h \
+  $$SRCDIR/math_avx.h \
   $$SRCDIR/math_fpu.h \
   $$SRCDIR/math_mmx.h \
+  $$SRCDIR/math_neon.h \
   $$SRCDIR/math_sse.h \
   $$SRCDIR/math_sse2.h \
   $$SRCDIR/math_sse3.h \
-  $$SRCDIR/math_ssse3.h \
   $$SRCDIR/math_sse41.h \
   $$SRCDIR/math_sse42.h \
-  $$SRCDIR/math_avx.h \
-  $$SRCDIR/math_neon.h
+  $$SRCDIR/math_ssse3.h
 
 SOURCES += \
   $$SRCDIR/waterspout.cpp \
@@ -35,8 +35,6 @@ DEFINES += \
   __SSSE3__=1 \
   __SSE4_1__=1 \
   __SSE4_2__=1 \
-  __SSE4A__=1 \
-  __AES__=1 \
   __AVX__=1
 
 unix{
