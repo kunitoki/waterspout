@@ -46,9 +46,9 @@ function setup_solution(projectname, projectkind, platformname)
   
   -- build/link options
   flags {
-    "EnableSSE",
-    "EnableSSE2",
-    "NoImportLib"
+    --"EnableSSE",
+    --"EnableSSE2",
+    --"NoImportLib"
   }
 
   -- target dirs
