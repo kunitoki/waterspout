@@ -1,4 +1,4 @@
-[(https://raw.github.com/kunitoki/waterspout/master/waterspout.png)]
+![ScreenShot](https://raw.github.com/kunitoki/waterspout/master/waterspout.png)
 
 waterspout
 ==========
