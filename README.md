@@ -1,3 +1,5 @@
+[https://raw.github.com/kunitoki/waterspout/master/waterspout.png]
+
 waterspout
 ==========
 
@@ -22,22 +24,23 @@ even old CPUs.
 Usage
 -----
 
-    #include <waterspout.h>
+```C++
+#include <waterspout.h>
 
-    int main(int argc, char* argv[])
+int main(int argc, char* argv[])
+{
+    waterspout::math_factory m;
+    waterspout::float_buffer bufferA(100), bufferB(100);
+
+    for (int i = 0; i < bufferA.size(); ++i)
     {
-      waterspout::math_factory m;
-      waterspout::float_buffer bufferA(100), bufferB(100);
-
-      for (int i = 0; i < bufferA.size(); ++i)
-      {
-        bufferA[i] = i / 100.0f;
-        bufferB[i] = 0.0f;
-      }
-
-      m->copy_buffer(bufferA.data(), bufferB.data(), 100);
+    bufferA[i] = i / 100.0f;
+    bufferB[i] = 0.0f;
     }
 
+    m->copy_buffer(bufferA.data(), bufferB.data(), 100);
+}
+```
 
 References
 ----------
