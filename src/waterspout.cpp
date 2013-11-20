@@ -95,17 +95,17 @@ enum CpuEndianess
 void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& edx)
 {
 #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW)
-    // GCC/MINGW provides a __get_cpuid function
-    __get_cpuid(op, &eax, &ebx, &ecx, &edx);
+  // GCC/MINGW provides a __get_cpuid function
+  __get_cpuid(op, &eax, &ebx, &ecx, &edx);
 
 #elif defined(WATERSPOUT_COMPILER_MSVC)
-    // MSVC provides a __cpuid function
-    int regs[4];
-    __cpuid(regs, op);
-    eax = (uint32_t)regs[0];
-    ebx = (uint32_t)regs[1];
-    ecx = (uint32_t)regs[2];
-    edx = (uint32_t)regs[3];
+  // MSVC provides a __cpuid function
+  int regs[4];
+  __cpuid(regs, op);
+  eax = (uint32_t)regs[0];
+  ebx = (uint32_t)regs[1];
+  ecx = (uint32_t)regs[2];
+  edx = (uint32_t)regs[3];
 
 #endif
 }
@@ -193,41 +193,183 @@ struct disable_sse_denormals
   {
     disable_floating_point_assertions
 
-    _old_mxcsr = _mm_getcsr();
+    old_mxcsr_ = _mm_getcsr();
   
     static const uint32_t caps = cpu_features();
 
     if (caps & SSE2)
     {
-      if ((_old_mxcsr & 0x8040) == 0) // set DAZ and FZ bits...
+      if ((old_mxcsr_ & 0x8040) == 0) // set DAZ and FZ bits...
       {
-        _mm_setcsr(_old_mxcsr | 0x8040);
+        _mm_setcsr(old_mxcsr_ | 0x8040);
       }
     }
     else
     {
       assert(caps & SSE); // Expected at least sse 1
 
-      if ((_old_mxcsr & 0x8000) == 0) // set DAZ bit...
+      if ((old_mxcsr_ & 0x8000) == 0) // set DAZ bit...
       {
-        _mm_setcsr(_old_mxcsr | 0x8000);
+        _mm_setcsr(old_mxcsr_ | 0x8000);
       }
     }
   }
   
   ~disable_sse_denormals()
   {
-    if (_old_mxcsr != 0)
+    if (old_mxcsr_ != 0)
     {
-      _mm_setcsr(_old_mxcsr);
+      _mm_setcsr(old_mxcsr_);
     }
 
     enable_floating_point_assertions
   }
 
 private:
-  int _old_mxcsr;
+  int old_mxcsr_;
 };
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+namespace logger_detail_ {
+
+
+//------------------------------------------------------------------------------
+
+#ifndef WATERSPOUT_LOG_FORMAT
+  #define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
+#endif
+
+#ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
+  #ifdef WATERSPOUT_DEBUG
+    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 0
+  #else
+    #define WATERSPOUT_DEFAULT_LOG_SEVERITY 2
+  #endif
+#endif
+
+
+//------------------------------------------------------------------------------
+
+bool logger::severity_env_check_ = true;
+bool logger::format_env_check_ = true;
+
+
+//------------------------------------------------------------------------------
+
+logger::severity_type logger::severity_level_ =
+    #if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
+        logger::debug
+    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 1
+        logger::warn
+    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 2
+        logger::error
+    #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 3
+        logger::none
+    #else
+        #error "Wrong default log severity level specified!"
+    #endif
+;
+
+//logger::severity_map logger::object_severity_level_ = logger::severity_map();
+
+
+//------------------------------------------------------------------------------
+
+#define __xstr__(s) __str__(s)
+#define __str__(s) #s
+std::string logger::format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
+#undef __xstr__
+#undef __str__
+
+std::string logger::str()
+{
+#if 0
+    // update the format from getenv if this is the first time
+    if (logger::format_env_check_)
+    {
+        logger::format_env_check_ = false;
+
+        const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
+        if (log_format != NULL)
+        {
+            logger::format_ = log_format;
+        }
+    }
+#endif
+
+    char buf[256];
+    const time_t tm = time(0);
+    strftime(buf, sizeof(buf), logger::format_.c_str(), localtime(&tm));
+    return buf;
+}
+
+
+//------------------------------------------------------------------------------
+
+std::ofstream logger::file_output_;
+std::string logger::file_name_;
+std::streambuf* logger::saved_buf_ = 0;
+
+
+//------------------------------------------------------------------------------
+
+void logger::use_file(std::string const& filepath)
+{
+    // save clog rdbuf
+    if (saved_buf_ == 0)
+    {
+        saved_buf_ = std::clog.rdbuf();
+    }
+
+    // use a file to output as clog rdbuf
+    if (file_name_ != filepath)
+    {
+        file_name_ = filepath;
+
+        if (file_output_.is_open())
+        {
+            file_output_.close();
+        }
+
+        file_output_.open(file_name_.c_str(), std::ios::out | std::ios::app);
+        if (file_output_)
+        {
+            std::clog.rdbuf(file_output_.rdbuf());
+        }
+        else
+        {
+            std::stringstream s;
+            s << "cannot redirect log to file " << file_output_;
+            throw std::runtime_error(s.str());
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
+
+void logger::use_console()
+{
+    // save clog rdbuf
+    if (saved_buf_ == 0)
+    {
+        saved_buf_ = std::clog.rdbuf();
+    }
+
+    // close the file to force a flush
+    if (file_output_.is_open())
+    {
+        file_output_.close();
+    }
+
+    std::clog.rdbuf(saved_buf_);
+}
+
+
+} // end namespace logger_detail_
 
 
 //==============================================================================
@@ -278,7 +420,7 @@ private:
 //------------------------------------------------------------------------------
 
 math_factory::math_factory(int flags, bool fallback)
-  : _math(NULL)
+  : math_(NULL)
 {
     if (! fallback)
     {
@@ -313,7 +455,7 @@ math_factory::math_factory(int flags, bool fallback)
          (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) ||
          (flags == FORCE_NEON))
     {
-        _math = new math_neon;
+        math_ = new math_neon;
     }
 
 #else
@@ -337,7 +479,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_avx;
+            math_ = new math_avx;
         }
     #endif
 
@@ -351,7 +493,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_sse42;
+            math_ = new math_sse42;
         }
     #endif
 
@@ -364,7 +506,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_sse41;
+            math_ = new math_sse41;
         }
     #endif
 
@@ -376,7 +518,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_ssse3;
+            math_ = new math_ssse3;
         }
     #endif
 
@@ -387,7 +529,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_sse3;
+            math_ = new math_sse3;
         }
     #endif
 
@@ -397,7 +539,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_sse2;
+            math_ = new math_sse2;
         }
     #endif
 
@@ -406,7 +548,7 @@ math_factory::math_factory(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            _math = new math_sse;
+            math_ = new math_sse;
         }
     #endif
 
@@ -414,13 +556,13 @@ math_factory::math_factory(int flags, bool fallback)
         else if ((features & MMX)
             && flags != FORCE_FPU)
         {
-            _math = new math_mmx;
+            math_ = new math_mmx;
         }
     #endif
 
         else // if ((features & FPU) || flags == FORCE_FPU)
         {
-            _math = new math_fpu;
+            math_ = new math_fpu;
         }
     }
 #endif
@@ -464,9 +606,9 @@ math_factory::math_factory(int flags, bool fallback)
         std::cout << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX ) << std::endl;
     #endif
 
-    if (_math != NULL)
+    if (math_ != NULL)
     {
-        std::cout << "Enabled " << _math->name() << std::endl;
+        std::cout << "Enabled " << math_->name() << std::endl;
     }
 #endif
 }
@@ -476,9 +618,9 @@ math_factory::math_factory(int flags, bool fallback)
 
 math_factory::~math_factory()
 {
-    if (_math != NULL)
+    if (math_ != NULL)
     {
-        delete _math;
+        delete math_;
     }
 }
 
@@ -487,9 +629,9 @@ math_factory::~math_factory()
 
 const char* math_factory::name() const
 {
-    if (_math != NULL)
+    if (math_ != NULL)
     {
-        return _math->name();
+        return math_->name();
     }
 
     return "";

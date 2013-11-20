@@ -55,7 +55,7 @@ namespace {
         {
             if (a[i] != b[i])
             {
-                std::cout << factory.name() << ": Copy is invalid !" << std::endl;
+                WATERSPOUT_LOG_INFO(test) << factory.name() << ": Copy is invalid !";
             }
         }
     }
@@ -111,8 +111,9 @@ namespace {
 
     void print_elapsed(const math_factory& factory, const char* function, double elapsed)
     {
-        std::cout << factory.name() << "(" << function << "): "
-                  << std::setprecision(32) << elapsed << " ms" << std::endl;
+        WATERSPOUT_LOG_INFO(test)
+            << factory.name() << "(" << function << "): "
+            << std::setprecision(32) << elapsed << " ms";
     }
 
     void run_all(const math_factory& factory, float_buffer& srcBuffer, float_buffer& dstBuffer)
@@ -149,6 +150,7 @@ namespace {
           measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
         print_elapsed(factory, "divide_buffers", elapsed);
 
+        WATERSPOUT_LOG_INFO(test) << "";
     }
 
 } // end namespace
@@ -164,7 +166,13 @@ int main(int argc, char* argv[])
     float_buffer dstBuffer(size);
 
     run_all(math_factory(FORCE_FPU), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_MMX), srcBuffer, dstBuffer);
     run_all(math_factory(FORCE_SSE), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSE2), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSE3), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSSE3), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSE41), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSE42), srcBuffer, dstBuffer);
     run_all(math_factory(FORCE_AVX), srcBuffer, dstBuffer);
     
     return 0;

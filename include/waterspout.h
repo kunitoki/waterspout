@@ -32,10 +32,21 @@
 
 #include <cstdlib>
 #include <cmath>
-#include <cassert>
-#include <iostream>
-#include <iomanip>
 #include <ctime>
+
+#include <cassert>
+
+#include <iostream>
+#include <sstream>
+#include <ostream>
+#include <fstream>
+#include <iomanip>
+
+#include <string>
+#include <memory>
+
+#include <exception>
+#include <stdexcept>
 
 
 //------------------------------------------------------------------------------
@@ -158,10 +169,21 @@
 
 #elif defined(__INTEL_COMPILER)
     #define WATERSPOUT_COMPILER_INTEL 1
-    
+
+#elif defined(__SUNPRO_CC)
+    #define WATERSPOUT_COMPILER_SUN 1
+
 #else
     #error "Unknown compiler: this compiler is not supported !"
 
+#endif
+
+
+/**
+ * C++0x or C++11 support (TODO for MSVC/INTEL)
+ */
+#if defined(__GXX_EXPERIMENTAL_CXX0X__)
+    #define WATERSPOUT_SUPPORT_CXX0X
 #endif
 
 
@@ -279,10 +301,435 @@ namespace waterspout {
 //------------------------------------------------------------------------------
 
 /**
+ * Helper class to disallow copying classes
+ */
+
+namespace noncopyable_detail_
+{
+    class noncopyable
+    {
+    protected:
+        noncopyable() {}
+        ~noncopyable() {}
+    private:
+        noncopyable(const noncopyable&);
+        const noncopyable& operator=(const noncopyable&);
+    };
+}
+
+typedef noncopyable_detail_::noncopyable noncopyable;
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+template <typename T>
+class create_using_new_
+{
+public:
+    static T* create()
+    {
+        return new T;
+    }
+
+    static void destroy(T* obj)
+    {
+        delete obj;
+    }
+};
+
+template <typename T>
+class create_static_
+{
+private:
+    union max_align
+    {
+        char t_[sizeof(T)];
+        short int shortInt_;
+        int int_;
+        long int longInt_;
+        float float_;
+        double double_;
+        long double longDouble_;
+        struct test_struct;
+        int test_struct::*pMember_;
+        int (test_struct::*pMemberFn_)(int);
+    };
+
+public:
+    static T* create()
+    {
+        static max_align staticMemory;
+
+        return new(&staticMemory) T;
+    }
+
+#if defined(WATERSPOUT_COMPILER_SUN)
+    // Sun C++ Compiler doesn't handle `volatile` keyword same as GCC.
+    static void destroy(T* obj)
+#else
+    static void destroy(volatile T* obj)
+#endif
+    {
+        obj->~T();
+    }
+};
+
+template <typename T,
+          template <typename U> class create_policy=create_static_> class singleton
+{
+#if defined(WATERSPOUT_COMPILER_SUN)
+    // Sun's C++ compiler will issue the following errors if create_policy<T> is used:
+    // Error: A class template name was expected instead of waterspout::create_policy<waterspout::T>
+    // Error: A "friend" declaration must specify a class or function.
+    friend class create_policy;
+#else
+    friend class create_policy<T>;
+#endif
+
+    static T* pInstance_;
+    static bool destroyed_;
+
+    singleton(const singleton &rhs);
+    singleton& operator=(const singleton&);
+
+    static void on_dead_reference()
+    {
+        throw std::runtime_error("dead reference!");
+    }
+
+    static void destroy_singleton()
+    {
+        create_policy<T>::destroy(pInstance_);
+        pInstance_ = 0;
+        destroyed_ = true;
+    }
+
+protected:
+    singleton() {}
+
+public:
+    static T& instance()
+    {
+        if (! pInstance_)
+        {
+            if (! pInstance_)
+            {
+                if (destroyed_)
+                {
+                    destroyed_ = false;
+                    on_dead_reference();
+                }
+                else
+                {
+                    pInstance_ = create_policy<T>::create();
+
+                    // register destruction
+                    std::atexit(&destroy_singleton);
+                }
+            }
+        }
+        return *pInstance_;
+    }
+};
+
+template <typename T,
+          template <typename U> class create_policy> T* singleton<T, create_policy>::pInstance_ = NULL;
+template <typename T,
+          template <typename U> class create_policy> bool singleton<T, create_policy>::destroyed_ = false;
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+namespace logger_detail_ {
+
+    /*
+     * The main logger class
+     */
+    class logger :
+        public singleton<logger>,
+        private noncopyable
+    {
+    public:
+        enum severity_type
+        {
+            debug = 0,
+            warn = 1,
+            error = 2,
+            none = 3
+        };
+
+        //typedef boost::unordered_map<std::string, severity_type> severity_map;
+
+        // global security level
+        static severity_type get_severity()
+        {
+            return severity_level_;
+        }
+
+        static void set_severity(const severity_type& severity_level)
+        {
+            severity_level_ = severity_level;
+        }
+
+        // per object security levels
+        static severity_type get_object_severity(std::string const& object_name)
+        {
+            /*
+            severity_map::iterator it = object_severity_level_.find(object_name);
+            if (object_name.empty() || it == object_severity_level_.end())
+            {
+                return severity_level_;
+            }
+            else
+            {
+                return it->second;
+            }
+            */
+
+            return severity_level_;
+        }
+
+        static void set_object_severity(std::string const& object_name,
+                                        const severity_type& security_level)
+        {
+            /*
+            if (! object_name.empty())
+            {
+                object_severity_level_[object_name] = security_level;
+            }
+            */
+        }
+
+        static void clear_object_severity()
+        {
+            /*
+            object_severity_level_.clear();
+            */
+        }
+
+        // format
+        static std::string get_format()
+        {
+            return format_;
+        }
+
+        static void set_format(std::string const& format)
+        {
+            format_ = format;
+        }
+
+        // interpolate the format string for output
+        static std::string str();
+
+        // output
+        static void use_file(std::string const& filepath);
+        static void use_console();
+
+    private:
+        static severity_type severity_level_;
+        //static severity_map object_severity_level_;
+        static bool severity_env_check_;
+
+        static std::string format_;
+        static bool format_env_check_;
+
+        static std::ofstream file_output_;
+        static std::string file_name_;
+        static std::streambuf* saved_buf_;
+    };
+
+
+    /*
+     * Default sink, it regulates access to clog
+     */
+    template<class Ch, class Tr, class A>
+    class clog_sink
+    {
+    public:
+        typedef std::basic_ostringstream<Ch, Tr, A> stream_buffer;
+
+        void operator()(const logger::severity_type& severity, const stream_buffer &s)
+        {
+            std::clog << logger::str() << " " << s.str() << std::endl;
+        }
+    };
+
+
+    /*
+     * Base log class, should not log anything when WATERSPOUT_VOID_LOGGING is defined
+     *
+     * This is used for debug/warn reporting that should not output
+     * anything when not compiling for speed.
+     */
+    template<template <class Ch, class Tr, class A> class OutputPolicy,
+             logger::severity_type Severity,
+             class Ch = char,
+             class Tr = std::char_traits<Ch>,
+             class A = std::allocator<Ch> >
+    class base_log : public noncopyable
+    {
+    public:
+        typedef OutputPolicy<Ch, Tr, A> output_policy;
+
+        base_log() {}
+
+        base_log(const char* object_name)
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            if (object_name != NULL)
+            {
+                object_name_ = object_name;
+            }
+#endif
+        }
+
+        ~base_log()
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            if (check_severity())
+            {
+                output_policy()(Severity, streambuf_);
+            }
+#endif
+        }
+
+        template<class T>
+        base_log &operator<<(const T &x)
+        {
+#if !defined(WATERSPOUT_VOID_LOGGING)
+            streambuf_ << x;
+#endif
+            return *this;
+        }
+
+    private:
+#if !defined(WATERSPOUT_VOID_LOGGING)
+        inline bool check_severity()
+        {
+            return Severity >= logger::get_object_severity(object_name_);
+        }
+
+        typename output_policy::stream_buffer streambuf_;
+        std::string object_name_;
+#endif
+    };
+
+
+    /*
+     * Base log class that always log, regardless of WATERSPOUT_VOID_LOGGING.
+     *
+     * This is used for error reporting that should always log something
+     */
+    template<template <class Ch, class Tr, class A> class OutputPolicy,
+             logger::severity_type Severity,
+             class Ch = char,
+             class Tr = std::char_traits<Ch>,
+             class A = std::allocator<Ch> >
+    class base_log_always : public noncopyable
+    {
+    public:
+        typedef OutputPolicy<Ch, Tr, A> output_policy;
+
+        base_log_always() {}
+
+        base_log_always(const char* object_name)
+        {
+            if (object_name != NULL)
+            {
+                object_name_ = object_name;
+            }
+        }
+
+        ~base_log_always()
+        {
+            if (check_severity())
+            {
+                output_policy()(Severity, streambuf_);
+            }
+        }
+
+        template<class T>
+        base_log_always &operator<<(const T &x)
+        {
+            streambuf_ << x;
+            return *this;
+        }
+
+    private:
+        inline bool check_severity()
+        {
+            return Severity >= logger::get_object_severity(object_name_);
+        }
+
+        typename output_policy::stream_buffer streambuf_;
+        std::string object_name_;
+    };
+
+    /*
+     * Real classes used in the code
+     */
+    typedef base_log<clog_sink, logger::debug> base_log_debug;
+    typedef base_log<clog_sink, logger::warn> base_log_warn;
+    typedef base_log_always<clog_sink, logger::error> base_log_error;
+    typedef base_log_always<clog_sink, logger::error> base_log_info;
+
+    class debug : public logger_detail_::base_log_debug {
+    public:
+        debug() : logger_detail_::base_log_debug() {}
+        debug(const char* object_name) : logger_detail_::base_log_debug(object_name) {}
+    };
+
+    class warn : public logger_detail_::base_log_warn {
+    public:
+        warn() : logger_detail_::base_log_warn() {}
+        warn(const char* object_name) : logger_detail_::base_log_warn(object_name) {}
+    };
+
+    class error : public logger_detail_::base_log_error {
+    public:
+        error() : logger_detail_::base_log_error() {}
+        error(const char* object_name) : logger_detail_::base_log_error(object_name) {}
+    };
+
+    class info : public logger_detail_::base_log_info {
+    public:
+        info() : logger_detail_::base_log_info() {}
+        info(const char* object_name) : logger_detail_::base_log_info(object_name) {}
+    };
+
+} // namespace detail
+
+
+//------------------------------------------------------------------------------
+
+/**
+ * Logging helpers
+ */
+
+typedef logger_detail_::debug logger_debug;
+typedef logger_detail_::warn logger_warn;
+typedef logger_detail_::error logger_error;
+typedef logger_detail_::info logger_info;
+
+#define WATERSPOUT_LOG_DEBUG(s) waterspout::logger_debug(#s)
+#define WATERSPOUT_LOG_WARN(s) waterspout::logger_warn(#s)
+#define WATERSPOUT_LOG_ERROR(s) waterspout::logger_error(#s)
+#define WATERSPOUT_LOG_INFO(s) waterspout::logger_info(#s)
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+/**
  * The timer class to measure elapsed time and benchmarking
  */
 
-class timer
+class timer : private noncopyable
 {
 public:
     timer()
@@ -296,44 +743,44 @@ public:
 
     void restart()
     {
-        _stopped = false;
-        _clock_start = time_now();
-        _cpu_start = clock();
+        stopped_ = false;
+        clock_start_ = time_now();
+        cpu_start_ = clock();
     }
 
     virtual void stop()
     {
-        _stopped = true;
-        _cpu_end = clock();
-        _clock_end = time_now();
+        stopped_ = true;
+        cpu_end_ = clock();
+        clock_end_ = time_now();
     }
 
     double cpu_elapsed()
     {
         // return elapsed CPU time in ms
-        if (! _stopped)
+        if (! stopped_)
         {
             stop();
         }
 
-        return ((double) (_cpu_end - _cpu_start)) / CLOCKS_PER_SEC * 1000.0;
+        return ((double) (cpu_end_ - cpu_start_)) / CLOCKS_PER_SEC * 1000.0;
     }
 
     double clock_elapsed()
     {
         // return elapsed wall clock time in ms
-        if (! _stopped)
+        if (! stopped_)
         {
             stop();
         }
 
-        return (_clock_end - _clock_start) * 1000.0;
+        return (clock_end_ - clock_start_) * 1000.0;
     }
 
 protected:
-    double _clock_start, _clock_end;
-    clock_t _cpu_start, _cpu_end;
-    bool _stopped;
+    double clock_start_, clock_end_;
+    clock_t cpu_start_, cpu_end_;
+    bool stopped_;
 };
 
 
@@ -345,7 +792,7 @@ protected:
  * @brief The memory class
  */
 
-class memory
+class memory : private noncopyable
 {
 public:
 
@@ -379,18 +826,18 @@ public:
  */
 
 template<class T, uint32_t alignment_bytes=32>
-class aligned_buffer
+class aligned_buffer : private noncopyable
 {
 public:
     aligned_buffer()
-      : _data(NULL),
-        _size(0)
+      : data_(NULL),
+        size_(0)
     {
     }
 
     aligned_buffer(uint32_t size)
-      : _data(NULL),
-        _size(0)
+      : data_(NULL),
+        size_(0)
     {
         allocate(size);
     }
@@ -407,24 +854,28 @@ public:
 
     forcedinline T& operator[](uint32_t index)
     {
-        return _data[index];
+        assert(data_ != NULL);
+        assert(index < size_);
+
+        return data_[index];
     }
     
     forcedinline const T& operator[](uint32_t index) const
     {
-        return _data[index];
+        assert(data_ != NULL);
+        assert(index < size_);
+
+        return data_[index];
     }
 
     forcedinline T* data()
     {
-        assert(_data != NULL);
-
-        return _data;
+        return data_;
     }
 
     forcedinline uint32_t size()
     {
-        return _size;
+        return size_;
     }
 
 private:
@@ -434,21 +885,21 @@ private:
 
         const uint32_t size_bytes = size * sizeof(T);
         
-        _data = (T*)memory::aligned_alloc(size_bytes, alignment_bytes);
-        _size = size;
+        data_ = (T*)memory::aligned_alloc(size_bytes, alignment_bytes);
+        size_ = size;
     }
 
     void deallocate()
     {
-        if (_data != NULL)
+        if (data_ != NULL)
         {
-            memory::aligned_free(_data);
-            _data = NULL;
+            memory::aligned_free(data_);
+            data_ = NULL;
         }
     }
 
-    T* _data;
-    uint32_t _size;
+    T* data_;
+    uint32_t size_;
 };
 
 
@@ -464,7 +915,7 @@ typedef aligned_buffer<double, 32> double_buffer;
  * Base math class interface
  */
 
-class math
+class math : private noncopyable
 {
 public:
     // Define a name for the math implementation
@@ -546,7 +997,7 @@ enum MathFlags
  * when no other SIMD extensions are found.
  */
 
-class math_factory
+class math_factory : private noncopyable
 {
 public:
     math_factory(int flag=AUTODETECT, bool fallback=true);
@@ -558,12 +1009,12 @@ public:
     // operate on the underlying math object
     forcedinline math* operator->() const
     {
-        return _math;
+        return math_;
     }
 
 protected:
 
-    math* _math;
+    math* math_;
 };
 
 
