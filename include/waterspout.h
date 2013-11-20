@@ -396,7 +396,7 @@ template <typename T,
 
     static void on_dead_reference()
     {
-        throw std::runtime_error("dead reference!");
+        throw std::runtime_error("singleton: dead reference !");
     }
 
     static void destroy_singleton()

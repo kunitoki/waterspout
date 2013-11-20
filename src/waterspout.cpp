@@ -425,28 +425,36 @@ math_factory::math_factory(int flags, bool fallback)
     if (! fallback)
     {
 #if ! defined(WATERSPOUT_SIMD_AVX)
-        if (flags == FORCE_AVX) throw 1;
+        if (flags == FORCE_AVX)
+            throw std::runtime_error("math_factory: AVX not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSE42)
-        if (flags == FORCE_SSE42) throw 1;
+        if (flags == FORCE_SSE42)
+            throw std::runtime_error("math_factory: SSE42 not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSE41)
-        if (flags == FORCE_SSE41) throw 1;
+        if (flags == FORCE_SSE41)
+            throw std::runtime_error("math_factory: SSE41 not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSSE3)
-        if (flags == FORCE_SSSE3) throw 1;
+        if (flags == FORCE_SSSE3)
+            throw std::runtime_error("math_factory: SSSE3 not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSE3)
-        if (flags == FORCE_SSE3) throw 1;
+        if (flags == FORCE_SSE3)
+            throw std::runtime_error("math_factory: SSE3 not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSE2)
-        if (flags == FORCE_SSE2) throw 1;
+        if (flags == FORCE_SSE2)
+            throw std::runtime_error("math_factory: SSE2 not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_SSE)
-        if (flags == FORCE_SSE) throw 1;
+        if (flags == FORCE_SSE)
+            throw std::runtime_error("math_factory: SSE not available!");
 #endif
 #if ! defined(WATERSPOUT_SIMD_MMX)
-        if (flags == FORCE_MMX) throw 1;
+        if (flags == FORCE_MMX)
+            throw std::runtime_error("math_factory: MMX not available!");
 #endif
     }
     
@@ -571,44 +579,56 @@ math_factory::math_factory(int flags, bool fallback)
 #if defined(WATERSPOUT_DEBUG) && 0
     char procname[13];
     cpu_processor_name(procname);
-    std::cout << "Processor name: " << procname << std::endl;
+    WATERSPOUT_LOG_DEBUG(math_factory) << "Processor name: " << procname;
 
-    std::cout << "Processor endianess: "
-      << (cpu_endianness() == ENDIAN_BIG ? "bigendian" : "littlendian") << std::endl;
+    WATERSPOUT_LOG_DEBUG(math_factory) << "Processor endianess: "
+      << (cpu_endianness() == ENDIAN_BIG ? "bigendian" : "littlendian");
 
-    std::cout << "Processor features:" << std::endl;
-    std::cout << "  FPU   = " << std::boolalpha << (bool)(cpu_features() & FPU  ) << std::endl;
+    WATERSPOUT_LOG_DEBUG(math_factory) << "Processor features:";
+    WATERSPOUT_LOG_DEBUG(math_factory)
+        << "  FPU   = " << std::boolalpha << (bool)(cpu_features() & FPU);
+
     #if defined(WATERSPOUT_SIMD_MMX)
-        std::cout << "  MMX   = " << std::boolalpha << (bool)(cpu_features() & MMX  ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  MMX   = " << std::boolalpha << (bool)(cpu_features() & MMX);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE)
-        std::cout << "  SSE   = " << std::boolalpha << (bool)(cpu_features() & SSE  ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE   = " << std::boolalpha << (bool)(cpu_features() & SSE);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE2)
-        std::cout << "  SSE2  = " << std::boolalpha << (bool)(cpu_features() & SSE2 ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE2  = " << std::boolalpha << (bool)(cpu_features() & SSE2);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE3)
-        std::cout << "  SSE3  = " << std::boolalpha << (bool)(cpu_extended_features() & SSE3) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE3  = " << std::boolalpha << (bool)(cpu_extended_features() & SSE3);
     #endif
     #if defined(WATERSPOUT_SIMD_SSSE3)
-        std::cout << "  SSSE3 = " << std::boolalpha << (bool)(cpu_extended_features() & SSSE3 ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSSE3 = " << std::boolalpha << (bool)(cpu_extended_features() & SSSE3);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE41)
-        std::cout << "  SSE41 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE41 ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE41 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE41);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE42)
-        std::cout << "  SSE42 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE42 ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE42 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE42);
     #endif
     #if defined(WATERSPOUT_SIMD_SSE4A)
-        std::cout << "  SSE4A = " << std::boolalpha << (bool)(cpu_extended_features() & SSE4A ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  SSE4A = " << std::boolalpha << (bool)(cpu_extended_features() & SSE4A);
     #endif
     #if defined(WATERSPOUT_SIMD_AVX)
-        std::cout << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX ) << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX);
     #endif
 
     if (math_ != NULL)
     {
-        std::cout << "Enabled " << math_->name() << std::endl;
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "Enabled " << math_->name() << instructions;
     }
 #endif
 }
