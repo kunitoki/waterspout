@@ -37,32 +37,47 @@ namespace waterspout {
 //------------------------------------------------------------------------------
 
 /**
+ * @brief The CpuFeatures enum
+ *
  * Reference:
  * http://datasheets.chipdb.org/Intel/x86/CPUID/24161821.pdf
  * http://www.flounder.com/cpuid_explorer2.htm
  */
-enum CpuidFeatures
+enum CpuFeatures
 {
   FPU   = 1<< 0, // Floating-Point Unit on-chip
   MMX   = 1<<23, // MultiMedia eXtension
   SSE   = 1<<25, // Streaming SIMD Extension 1
-  SSE2  = 1<<26, // Streaming SIMD Extension 2
+  SSE2  = 1<<26  // Streaming SIMD Extension 2
 };
 
-
 /**
+ * @brief The CpuExtendedFeatures enum
+ *
  * Reference:
  * http://datasheets.chipdb.org/Intel/x86/CPUID/24161821.pdf
  * http://www.flounder.com/cpuid_explorer2.htm
  */
-enum CpuidExtendedFeatures
+enum CpuExtendedFeatures
 {
   SSE3  = 1<< 0, // Streaming SIMD Extension 3
   SSE4A = 1<< 6, // SSE4A (only for AMD)
   SSSE3 = 1<< 9, // SSSE3
   SSE41 = 1<<19, // SSE41
   SSE42 = 1<<20, // SSE42
-  AVX   = 1<<28, // AVX
+  AVX   = 1<<28  // AVX
+};
+
+/**
+ * @brief The CpuEndianess enum
+ */
+enum CpuEndianess
+{
+  ENDIAN_UNKNOWN     = 0,
+  ENDIAN_BIG         = 1,
+  ENDIAN_LITTLE      = 2,
+  ENDIAN_BIG_WORD    = 3, // Middle-endian, Honeywell 316 style
+  ENDIAN_LITTLE_WORD = 4  // Middle-endian, PDP-11 style
 };
 
 
@@ -103,7 +118,7 @@ void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& e
  * \return The content of the edx register containing available features
  */
 
-uint32_t cpuid_features()
+uint32_t cpu_features()
 {
   uint32_t eax, ebx, ecx, edx;
   cpuid(1, eax, ebx, ecx, edx);
@@ -118,7 +133,7 @@ uint32_t cpuid_features()
  * \return The content of the ecx register containing available extended features
  */
 
-uint32_t cpuid_extended_features()
+uint32_t cpu_extended_features()
 {
   uint32_t eax, ebx, ecx, edx;
   cpuid(1, eax, ebx, ecx, edx);
@@ -134,31 +149,20 @@ uint32_t cpuid_extended_features()
  *             contain the name of the processor.
  */
 
-void cpuid_procname(char* name)
+void cpu_processor_name(char* name)
 {
   name[12] = 0;
   uint32_t max_op;
   cpuid(0, max_op, (uint32_t&)name[0], (uint32_t&)name[8], (uint32_t&)name[4]);
 }
 
-
-//==============================================================================
-
 //------------------------------------------------------------------------------
 
-enum CpuEndianess
-{
-  ENDIAN_UNKNOWN,
-  ENDIAN_BIG,
-  ENDIAN_LITTLE,
-  ENDIAN_BIG_WORD,   // Middle-endian, Honeywell 316 style
-  ENDIAN_LITTLE_WORD // Middle-endian, PDP-11 style
-};
+/**
+ * Retrieve the processor endianess.
+ */
 
-
-//------------------------------------------------------------------------------
-
-int endianness()
+uint32_t cpu_endianness()
 {
   uint32_t value;
   uint8_t* buffer = (uint8_t*)&value;
@@ -191,7 +195,7 @@ struct disable_sse_denormals
 
     _old_mxcsr = _mm_getcsr();
   
-    static const uint32_t caps = cpuid_features();
+    static const uint32_t caps = cpu_features();
 
     if (caps & SSE2)
     {
@@ -314,8 +318,8 @@ math_factory::math_factory(int flags, bool fallback)
 
 #else
     {
-        static uint32_t features = cpuid_features();
-        static uint32_t features_ext = cpuid_extended_features();
+        static uint32_t features = cpu_features();
+        static uint32_t features_ext = cpu_extended_features();
 
         if (0)
         {
@@ -424,39 +428,40 @@ math_factory::math_factory(int flags, bool fallback)
 
 #if defined(WATERSPOUT_DEBUG)
     char procname[13];
-    cpuid_procname(procname);
+    cpu_processor_name(procname);
     std::cout << "Processor name: " << procname << std::endl;
 
-    std::cout << "Processor endianess: " << (endianness() == ENDIAN_BIG ? "bigendian" : "littlendian") << std::endl;
+    std::cout << "Processor endianess: "
+      << (cpu_endianness() == ENDIAN_BIG ? "bigendian" : "littlendian") << std::endl;
 
     std::cout << "Processor features:" << std::endl;
-    std::cout << "  FPU   = " << std::boolalpha << (bool)(cpuid_features() & FPU  ) << std::endl;
+    std::cout << "  FPU   = " << std::boolalpha << (bool)(cpu_features() & FPU  ) << std::endl;
     #if defined(WATERSPOUT_SIMD_MMX)
-        std::cout << "  MMX   = " << std::boolalpha << (bool)(cpuid_features() & MMX  ) << std::endl;
+        std::cout << "  MMX   = " << std::boolalpha << (bool)(cpu_features() & MMX  ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE)
-        std::cout << "  SSE   = " << std::boolalpha << (bool)(cpuid_features() & SSE  ) << std::endl;
+        std::cout << "  SSE   = " << std::boolalpha << (bool)(cpu_features() & SSE  ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE2)
-        std::cout << "  SSE2  = " << std::boolalpha << (bool)(cpuid_features() & SSE2 ) << std::endl;
+        std::cout << "  SSE2  = " << std::boolalpha << (bool)(cpu_features() & SSE2 ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE3)
-        std::cout << "  SSE3  = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE3) << std::endl;
+        std::cout << "  SSE3  = " << std::boolalpha << (bool)(cpu_extended_features() & SSE3) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSSE3)
-        std::cout << "  SSSE3 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSSE3 ) << std::endl;
+        std::cout << "  SSSE3 = " << std::boolalpha << (bool)(cpu_extended_features() & SSSE3 ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE41)
-        std::cout << "  SSE41 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE41 ) << std::endl;
+        std::cout << "  SSE41 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE41 ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE42)
-        std::cout << "  SSE42 = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE42 ) << std::endl;
+        std::cout << "  SSE42 = " << std::boolalpha << (bool)(cpu_extended_features() & SSE42 ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_SSE4A)
-        std::cout << "  SSE4A = " << std::boolalpha << (bool)(cpuid_extended_features() & SSE4A ) << std::endl;
+        std::cout << "  SSE4A = " << std::boolalpha << (bool)(cpu_extended_features() & SSE4A ) << std::endl;
     #endif
     #if defined(WATERSPOUT_SIMD_AVX)
-        std::cout << "  AVX   = " << std::boolalpha << (bool)(cpuid_extended_features() & AVX ) << std::endl;
+        std::cout << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX ) << std::endl;
     #endif
 
     if (_math != NULL)

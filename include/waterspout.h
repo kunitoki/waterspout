@@ -8,22 +8,23 @@
  * 
  * The MIT License (MIT)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_H__
@@ -36,6 +37,12 @@
 #include <iomanip>
 #include <ctime>
 
+
+//------------------------------------------------------------------------------
+
+/**
+ * SIMD intrinsics definitions
+ */
 
 #if defined(__MMX__)
   #define WATERSPOUT_SIMD_MMX
@@ -90,10 +97,10 @@
 // #include <x86intrin.h> // pull al the others in !
 
 
-//------------------------------------------------------------------------------
 /**
  * System definitions
  */
+
 #ifdef _WIN32
     // Windows (x64 and x86)
     #define WATERSPOUT_SYSTEM_WINDOWS 1
@@ -135,6 +142,7 @@
 /**
  * Compiler definition
  */
+
 #if defined(_MSC_VER)
     #define WATERSPOUT_COMPILER_MSVC 1
 
@@ -142,7 +150,11 @@
     #define WATERSPOUT_COMPILER_MINGW 1
 
 #elif defined(__GNUC__)
-    #define WATERSPOUT_COMPILER_GCC 1
+    #if defined(__clang__)
+        #define WATERSPOUT_COMPILER_CLANG 1
+    #else
+        #define WATERSPOUT_COMPILER_GCC 1
+    #endif
 
 #elif defined(__INTEL_COMPILER)
     #define WATERSPOUT_COMPILER_INTEL 1
@@ -153,11 +165,22 @@
 #endif
 
 
+/**
+ * Debug and Release definitions
+ */
+
+#if defined(DEBUG) || defined(_DEBUG)
+    #define WATERSPOUT_DEBUG 1
+#endif
+
+
 //------------------------------------------------------------------------------
+
 /**
  * Waterspout global macros helpers by compiler
  */
-#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW)
+
+#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
     #include <stdint.h>
     #include <malloc.h>
     #include <cpuid.h>
@@ -230,12 +253,9 @@
 
 //------------------------------------------------------------------------------
 
-#if defined(DEBUG) || defined(_DEBUG)
-    #define WATERSPOUT_DEBUG 1
-#endif
-
-// minimum size for sse samples
-#define WATERSPOUT_MIN_SSE_SAMPLES 32
+/**
+ * Common define helpers
+ */
 
 // always false assertion
 #define assertfalse \
@@ -247,7 +267,6 @@
 // fast way to undenormalize a float
 #define undernormalize(floatvalue) \
     floatvalue += 1.0E-18f; floatvalue -= 1.0E-18f;
-
 
 
 //------------------------------------------------------------------------------
@@ -322,6 +341,10 @@ protected:
 
 //------------------------------------------------------------------------------
 
+/**
+ * @brief The memory class
+ */
+
 class memory
 {
 public:
@@ -331,7 +354,7 @@ public:
         return (void*)
 #if defined(WATERSPOUT_COMPILER_MSVC)
             ::_aligned_malloc(size_bytes, alignment_bytes);
-#elif defined(WATERSPOUT_COMPILER_GCC)
+#elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
             ::memalign(alignment_bytes, size_bytes);
 #endif
     }
@@ -340,7 +363,7 @@ public:
     {
 #if defined(WATERSPOUT_COMPILER_MSVC)
         ::_aligned_free(ptr);
-#elif defined(WATERSPOUT_COMPILER_GCC)
+#elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
         ::free(ptr);
 #endif
     }
@@ -444,11 +467,12 @@ typedef aligned_buffer<double, 32> double_buffer;
 class math
 {
 public:
+    // Define a name for the math implementation
     virtual const char* name() = 0;
 
-    virtual void copy_buffer(
+    // Mono buffer manipulation
+    virtual void clear_buffer(
         float* srcBuffer,
-        float* dstBuffer,
         uint32_t size) = 0;
 
     virtual void scale_buffer(
@@ -456,6 +480,12 @@ public:
         uint32_t size,
         float gain) = 0;
 
+    virtual void copy_buffer(
+        float* srcBuffer,
+        float* dstBuffer,
+        uint32_t size) = 0;
+
+    // Mono buffer arithmetic
     virtual void add_buffers(
         float* srcBufferA,
         float* srcBufferB,
@@ -480,28 +510,6 @@ public:
         float* dstBuffer,
         uint32_t size) = 0;
 
-    /*
-    virtual void copy_buffer_stereo(
-        float* srcLeft,
-        float* srcRight,
-        float* dstLeft,
-        float* dstRight,
-        uint32_t size) = 0;
-
-    virtual void copy_buffer_apply_gain(
-        float* srcBuffer,
-        float* dstBuffer,
-        uint32_t size,
-        float gain) = 0;
-
-    virtual void copy_buffer_stereo_apply_gain(
-        float* srcLeft,
-        float* srcRight,
-        float* dstLeft,
-        float* dstRight,
-        uint32_t size,
-        float gain) = 0;
-    */
 
     virtual ~math() { }
 
@@ -526,7 +534,7 @@ enum MathFlags
     FORCE_SSE41 =  7,
     FORCE_SSE42 =  8,
     FORCE_AVX   =  9,
-    FORCE_NEON  = 10,
+    FORCE_NEON  = 10
 };
 
 

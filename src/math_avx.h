@@ -5,25 +5,26 @@
  *
  * Copyright (c) 2013 Lucio Asnaghi
  *
- * 
+ *
  * The MIT License (MIT)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_AVX_H__
@@ -41,28 +42,43 @@
 class math_avx : public math_sse42
 {
 public:
+
+    //--------------------------------------------------------------------------
+
+    const char* name() { return "AVX"; }
+
+
+    //--------------------------------------------------------------------------
+
+    enum AVXMathDefines
+    {
+        MIN_AVX_SIZE    = 8,
+        MIN_AVX_SAMPLES = 32
+    };
+
+
+    //--------------------------------------------------------------------------
+
     math_avx()
     {
         //assertfalse; // not implemented !
     }
 
-    const char* name() { return "AVX"; }
     
+    //--------------------------------------------------------------------------
+
     void copy_buffer(float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
 
-        if (size < WATERSPOUT_MIN_SSE_SAMPLES ||
+        if (size < MIN_AVX_SAMPLES ||
               ((ptrdiff_t)dstBuffer & 0x0F) != align_bytes)
         {
-            for (int i = 0; i < size; ++i)
-            {
-              dstBuffer[i] = srcBuffer[i];
-            }
+            math_sse42::copy_buffer(srcBuffer, dstBuffer, size);
         } 
         else 
         { 
-            assert(size >= 8);
+            assert(size >= MIN_AVX_SIZE);
 
             // Copy unaligned head
             switch (align_bytes >> 3)

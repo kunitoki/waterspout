@@ -1,2 +1,3 @@
 !.gitignore
 !premake4.lua
+!*.pro
