@@ -1,4 +1,6 @@
-->![ScreenShot](https://raw.github.com/kunitoki/waterspout/master/waterspout.png)<-
+<p align="center">
+![ScreenShot](https://raw.github.com/kunitoki/waterspout/master/waterspout.png)
+</p>
 
 waterspout
 ==========
