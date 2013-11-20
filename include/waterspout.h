@@ -245,9 +245,9 @@
 
 // static assert
 template <bool b> struct staticassert_ {};
-template <> struct staticassert_<true> { static void test() {} };
+template <> struct staticassert_<true> { static void valid_expression() {} };
 #define staticassert(x) \
-    staticassert_<x>::test();
+    staticassert_<x>::valid_expression();
 
 // always false assertion
 #define assertfalse \
