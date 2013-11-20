@@ -11,5 +11,7 @@ before_script:
   - cd ./build/
   - premake4 gmake
 script:
+  - make config=debug32 && ../bin/Linux/debug32/waterspout
+  - make config=release32 && ../bin/Linux/release32/waterspout
   - make config=debug64 && ../bin/Linux/debug64/waterspout
   - make config=release64 && ../bin/Linux/release64/waterspout
