@@ -261,7 +261,7 @@ template <> struct staticassert_<true> { static void valid_expression() {} };
 #define antidenormal 1.0e-25f
 
 // fast way to undenormalize a float
-#define undernormalize(floatvalue) \
+#define undenormalize(floatvalue) \
     floatvalue += 1.0e-18f; floatvalue -= 1.0e-18f;
 
 
@@ -483,6 +483,11 @@ public:
     virtual void clear_buffer(
         float* src_buffer,
         uint32_t size) const = 0;
+
+    virtual void set_buffer(
+        float* src_buffer,
+        uint32_t size,
+        float value) const = 0;
 
     virtual void scale_buffer(
         float* src_buffer,

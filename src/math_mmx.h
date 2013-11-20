@@ -30,8 +30,6 @@
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_MMX_H__
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_MMX_H__
 
-#include <mmintrin.h>  // MMX
-
 
 //==============================================================================
 

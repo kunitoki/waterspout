@@ -30,8 +30,6 @@
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE3_H__
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE3_H__
 
-#include <pmmintrin.h> // SSE3
-
 
 //------------------------------------------------------------------------------
 

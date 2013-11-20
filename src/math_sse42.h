@@ -30,8 +30,6 @@
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE42_H__
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE42_H__
 
-#include <nmmintrin.h> // SSE4.2
-
 
 //------------------------------------------------------------------------------
 

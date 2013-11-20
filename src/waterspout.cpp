@@ -29,6 +29,7 @@
 #include <waterspout.h>
 
 #include <cstdlib>
+#include <float.h>
 #include <stdexcept>
 
 #include <memory>
@@ -40,8 +41,95 @@
 #include <string>
 #include <map>
 
+#if defined(WATERSPOUT_SIMD_MMX)
+    #include <mmintrin.h>  // MMX
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSE)
+    #include <xmmintrin.h> // SSE
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSE2)
+    #include <emmintrin.h> // SSE2
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSE3)
+    #include <pmmintrin.h> // SSE3
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSSE3)
+    #include <tmmintrin.h> // SSSE3
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSE41)
+    #include <smmintrin.h> // SSE4.1
+#endif
+
+#if defined(WATERSPOUT_SIMD_SSE42)
+    #include <nmmintrin.h> // SSE4.2
+#endif
+
+#if defined(WATERSPOUT_SIMD_AVX)
+    #include <immintrin.h> // AVX
+#endif
+
+#if defined(WATERSPOUT_SIMD_NEON)
+    // which include ?
+#endif
+
 
 namespace waterspout {
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+/**
+ * These macros are ripped from Intel Architecture Code Analyzer (IACA) and
+ * serves the purpose to check for performance bottleneck in SIMD instructions
+ *
+ * http://software.intel.com/en-us/articles/intel-architecture-code-analyzer
+ */
+
+#ifdef IACA_MARKS_OFF
+    #define IACA_START
+    #define IACA_END
+    #define IACA_MSC64_START
+    #define IACA_MSC64_END
+
+#else
+    #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+        #define IACA_SSC_MARK(MARK_ID) \
+            __asm__ __volatile__( \
+                "\n\t  movl $"#MARK_ID", %%ebx"	\
+                "\n\t  .byte 0x64, 0x67, 0x90" \
+                : : : "memory" );
+
+        #define IACA_UD_BYTES \
+            __asm__ __volatile__( \
+                "\n\t .byte 0x0F, 0x0B");
+
+    #else
+        #define IACA_UD_BYTES \
+            { __asm _emit 0x0F \
+              __asm _emit 0x0B }
+
+        #define IACA_SSC_MARK(x) \
+            { __asm  mov ebx, x \
+              __asm  _emit 0x64 \
+              __asm  _emit 0x67 \
+              __asm  _emit 0x90 }
+
+        #define IACA_VC64_START __writegsbyte(111, 111);
+        #define IACA_VC64_END   __writegsbyte(222, 222);
+
+    #endif
+
+    #define IACA_START { IACA_UD_BYTES      IACA_SSC_MARK(111) }
+    #define IACA_END   { IACA_SSC_MARK(222) IACA_UD_BYTES }
+
+#endif
 
 
 //==============================================================================
@@ -576,10 +664,10 @@ typedef logger_detail_::info logger_info;
  */
 enum CpuFeatures
 {
-  FPU   = 1<< 0, // Floating-Point Unit on-chip
-  MMX   = 1<<23, // MultiMedia eXtension
-  SSE   = 1<<25, // Streaming SIMD Extension 1
-  SSE2  = 1<<26  // Streaming SIMD Extension 2
+    FPU   = 1<< 0, // Floating-Point Unit on-chip
+    MMX   = 1<<23, // MultiMedia eXtension
+    SSE   = 1<<25, // Streaming SIMD Extension 1
+    SSE2  = 1<<26  // Streaming SIMD Extension 2
 };
 
 /**
@@ -591,12 +679,12 @@ enum CpuFeatures
  */
 enum CpuExtendedFeatures
 {
-  SSE3  = 1<< 0, // Streaming SIMD Extension 3
-  SSE4A = 1<< 6, // SSE4A (only for AMD)
-  SSSE3 = 1<< 9, // SSSE3
-  SSE41 = 1<<19, // SSE41
-  SSE42 = 1<<20, // SSE42
-  AVX   = 1<<28  // AVX
+    SSE3  = 1<< 0, // Streaming SIMD Extension 3
+    SSE4A = 1<< 6, // SSE4A (only for AMD)
+    SSSE3 = 1<< 9, // SSSE3
+    SSE41 = 1<<19, // SSE41
+    SSE42 = 1<<20, // SSE42
+    AVX   = 1<<28  // AVX
 };
 
 /**
@@ -604,11 +692,11 @@ enum CpuExtendedFeatures
  */
 enum CpuEndianess
 {
-  ENDIAN_UNKNOWN     = 0,
-  ENDIAN_BIG         = 1,
-  ENDIAN_LITTLE      = 2,
-  ENDIAN_BIG_WORD    = 3, // Middle-endian, Honeywell 316 style
-  ENDIAN_LITTLE_WORD = 4  // Middle-endian, PDP-11 style
+    ENDIAN_UNKNOWN     = 0,
+    ENDIAN_BIG         = 1,
+    ENDIAN_LITTLE      = 2,
+    ENDIAN_BIG_WORD    = 3, // Middle-endian, Honeywell 316 style
+    ENDIAN_LITTLE_WORD = 4  // Middle-endian, PDP-11 style
 };
 
 
@@ -626,17 +714,17 @@ enum CpuEndianess
 void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& edx)
 {
 #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW)
-  // GCC/MINGW provides a __get_cpuid function
-  __get_cpuid(op, &eax, &ebx, &ecx, &edx);
+    // GCC/MINGW provides a __get_cpuid function
+    __get_cpuid(op, &eax, &ebx, &ecx, &edx);
 
 #elif defined(WATERSPOUT_COMPILER_MSVC)
-  // MSVC provides a __cpuid function
-  int regs[4];
-  __cpuid(regs, op);
-  eax = (uint32_t)regs[0];
-  ebx = (uint32_t)regs[1];
-  ecx = (uint32_t)regs[2];
-  edx = (uint32_t)regs[3];
+    // MSVC provides a __cpuid function
+    int regs[4];
+    __cpuid(regs, op);
+    eax = (uint32_t)regs[0];
+    ebx = (uint32_t)regs[1];
+    ecx = (uint32_t)regs[2];
+    edx = (uint32_t)regs[3];
 
 #endif
 }
@@ -651,9 +739,9 @@ void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& e
 
 uint32_t cpu_features()
 {
-  uint32_t eax, ebx, ecx, edx;
-  cpuid(1, eax, ebx, ecx, edx);
-  return edx;
+    uint32_t eax, ebx, ecx, edx;
+    cpuid(1, eax, ebx, ecx, edx);
+    return edx;
 }
 
 
@@ -666,9 +754,9 @@ uint32_t cpu_features()
 
 uint32_t cpu_extended_features()
 {
-  uint32_t eax, ebx, ecx, edx;
-  cpuid(1, eax, ebx, ecx, edx);
-  return ecx;
+    uint32_t eax, ebx, ecx, edx;
+    cpuid(1, eax, ebx, ecx, edx);
+    return ecx;
 }
 
 
@@ -682,12 +770,12 @@ uint32_t cpu_extended_features()
 
 std::string cpu_processor_name()
 {
-  char name[13];
-  name[12] = 0;
-  uint32_t max_op;
-  cpuid(0, max_op, (uint32_t&)name[0], (uint32_t&)name[8], (uint32_t&)name[4]);
+    char name[13];
+    name[12] = 0;
+    uint32_t max_op;
+    cpuid(0, max_op, (uint32_t&)name[0], (uint32_t&)name[8], (uint32_t&)name[4]);
 
-  return std::string(name);
+    return std::string(name);
 }
 
 //------------------------------------------------------------------------------
@@ -698,22 +786,22 @@ std::string cpu_processor_name()
 
 uint32_t cpu_endianness()
 {
-  uint32_t value;
-  uint8_t* buffer = (uint8_t*)&value;
+    uint32_t value;
+    uint8_t* buffer = (uint8_t*)&value;
 
-  buffer[0] = 0x00;
-  buffer[1] = 0x01;
-  buffer[2] = 0x02;
-  buffer[3] = 0x03;
+    buffer[0] = 0x00;
+    buffer[1] = 0x01;
+    buffer[2] = 0x02;
+    buffer[3] = 0x03;
 
-  switch (value)
-  {
-  case uint32_t(0x00010203): return ENDIAN_BIG;
-  case uint32_t(0x03020100): return ENDIAN_LITTLE;
-  case uint32_t(0x02030001): return ENDIAN_BIG_WORD;
-  case uint32_t(0x01000302): return ENDIAN_LITTLE_WORD;
-  default:                   return ENDIAN_UNKNOWN;
-  }
+    switch (value)
+    {
+    case uint32_t(0x00010203): return ENDIAN_BIG;
+    case uint32_t(0x03020100): return ENDIAN_LITTLE;
+    case uint32_t(0x02030001): return ENDIAN_BIG_WORD;
+    case uint32_t(0x01000302): return ENDIAN_LITTLE_WORD;
+    default:                   return ENDIAN_UNKNOWN;
+    }
 }
 
 

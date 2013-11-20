@@ -30,8 +30,6 @@
 #ifndef __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE2_H__
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_SSE2_H__
 
-#include <emmintrin.h> // SSE2
-
 
 //------------------------------------------------------------------------------
 

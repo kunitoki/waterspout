@@ -30,6 +30,7 @@
 #include <waterspout.h>
 
 #include <ctime>
+#include <stdexcept>
 #include <iostream>
 #include <iomanip>
 
@@ -105,42 +106,60 @@ protected:
 namespace {
 
 
-static const uint32_t num_runs = 25;
+static const uint32_t num_runs = 1;
 
 
 //------------------------------------------------------------------------------
 
-void prepare_buffers(float* a, float* b, uint32_t size)
+void check_buffer_is_value(float* buffer, uint32_t size, float value)
 {
     for (int i = 0; i < size; ++i)
     {
-        a[i] = i / (float)size;
-        b[i] = 0.0f;
+        if (buffer[i] != value)
+        {
+            std::clog << "Errors at index "
+                      << i << " (" << buffer[i] << "!=" << value << ")" << std::endl;
+
+            throw std::runtime_error("Buffer is not a specific value !");
+        }
     }
 }
 
+void check_buffer_is_zero(float* buffer, uint32_t size)
+{
+    check_buffer_is_value(buffer, size, 0.0f);
+}
 
-//------------------------------------------------------------------------------
-
-void check_buffers(const math& factory, float* a, float* b, uint32_t size)
+void check_buffers_are_equal(float* a, float* b, uint32_t size)
 {
     for (int i = 0; i < size; ++i)
     {
         if (a[i] != b[i])
         {
-            std::cout << factory.name() << ": Copy is invalid !" << std::endl;
+            std::clog << "Errors at index "
+                      << i << " (" << a[i] << "!=" << b[i] << ")" << std::endl;
+
+            throw std::runtime_error("Buffers are not equal !");
         }
     }
 }
 
 
 //------------------------------------------------------------------------------
-
+/*
 double measure_buffer_clear(const math& factory, float* srcBuffer, uint32_t size)
 {
     timer t;
     for (int i = 0; i < num_runs; ++i)
         factory->clear_buffer(srcBuffer, size);
+    return t.clock_elapsed() / (double)num_runs;
+}
+
+double measure_buffer_set(const math& factory, float* srcBuffer, uint32_t size, float value)
+{
+    timer t;
+    for (int i = 0; i < num_runs; ++i)
+        factory->set_buffer(srcBuffer, size, value);
     return t.clock_elapsed() / (double)num_runs;
 }
 
@@ -202,44 +221,106 @@ void print_elapsed(const math& factory, const char* function, double elapsed)
         << std::setprecision(32) << elapsed << " ms" << std::endl;
 }
 
+#if 0
+double elapsed = 0.0;
+
+prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+
+elapsed =
+  measure_buffer_clear(factory, srcBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "clear_buffer", elapsed);
+
+elapsed =
+  measure_buffer_set(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
+print_elapsed(factory, "set_buffer", elapsed);
+
+elapsed =
+  measure_buffer_scale(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
+print_elapsed(factory, "scale_buffer", elapsed);
+
+elapsed =
+  measure_buffer_copy(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "copy_buffer", elapsed);
+
+elapsed =
+  measure_buffers_add(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "add_buffers", elapsed);
+
+elapsed =
+  measure_buffers_subtract(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "subtract_buffers", elapsed);
+
+elapsed =
+  measure_buffers_multiply(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "multiply_buffers", elapsed);
+
+elapsed =
+  measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+print_elapsed(factory, "divide_buffers", elapsed);
+
+std::cout << std::endl;
+#endif
+
+*/
+
 
 //------------------------------------------------------------------------------
 
-void run_all(const math& factory, float_buffer& srcBuffer, float_buffer& dstBuffer)
+void run_unit_tests(int flags)
 {
-    double elapsed = 0.0;
+    const uint32_t size = 4096;
 
-    prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+    math fpu(FORCE_FPU);
+    math simd(flags);
 
-    elapsed =
-      measure_buffer_clear(factory, srcBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "clear_buffer", elapsed);
+    float_buffer src_buffer_a1(size);
+    float_buffer src_buffer_a2(size);
+    float_buffer src_buffer_b1(size);
+    float_buffer src_buffer_b2(size);
+    float_buffer dst_buffer_1(size);
+    float_buffer dst_buffer_2(size);
 
-    elapsed =
-      measure_buffer_scale(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
-    print_elapsed(factory, "scale_buffer", elapsed);
+    std::clog << simd.name() << ": clear_buffer" << std::endl;
+    simd->clear_buffer(src_buffer_a1.data(), size);
+    fpu->clear_buffer(src_buffer_a2.data(), size);
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), size);
 
-    elapsed =
-      measure_buffer_copy(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "copy_buffer", elapsed);
+    std::clog << simd.name() << ": set_buffer" << std::endl;
+    simd->set_buffer(src_buffer_a1.data(), size, 0.5f);
+    fpu->set_buffer(src_buffer_a2.data(), size, 0.5f);
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), size);
 
-    elapsed =
-      measure_buffers_add(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "add_buffers", elapsed);
+    std::clog << simd.name() << ": scale_buffer" << std::endl;
+    simd->scale_buffer(src_buffer_a1.data(), size, 2.0f);
+    fpu->scale_buffer(src_buffer_a2.data(), size, 2.0f);
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), size);
 
-    elapsed =
-      measure_buffers_subtract(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "subtract_buffers", elapsed);
+    std::clog << simd.name() << ": copy_buffer" << std::endl;
+    simd->copy_buffer(src_buffer_a1.data(), dst_buffer_1.data(), size);
+    fpu->copy_buffer(src_buffer_a2.data(), dst_buffer_2.data(), size);
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), size);
 
-    elapsed =
-      measure_buffers_multiply(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "multiply_buffers", elapsed);
+    std::clog << simd.name() << ": add_buffers" << std::endl;
+    simd->add_buffers(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), size);
+    fpu->add_buffers(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), size);
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), size);
 
-    elapsed =
-      measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-    print_elapsed(factory, "divide_buffers", elapsed);
+    std::clog << simd.name() << ": subtract_buffers" << std::endl;
+    simd->subtract_buffers(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), size);
+    fpu->subtract_buffers(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), size);
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), size);
 
-    std::cout << std::endl;
+    std::clog << simd.name() << ": multiply_buffers" << std::endl;
+    simd->multiply_buffers(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), size);
+    fpu->multiply_buffers(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), size);
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), size);
+
+    std::clog << simd.name() << ": divide_buffers" << std::endl;
+    simd->set_buffer(src_buffer_b1.data(), size, 2.0f);
+    fpu->set_buffer(src_buffer_b2.data(), size, 2.0f);
+    simd->divide_buffers(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), size);
+    fpu->divide_buffers(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), size);
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), size);
 }
 
 
@@ -250,18 +331,14 @@ void run_all(const math& factory, float_buffer& srcBuffer, float_buffer& dstBuff
 
 int main(int argc, char* argv[])
 {
-    const uint32_t size = 16384;
+    //run_unit_tests(FORCE_MMX);
+    run_unit_tests(FORCE_SSE);
+    //run_unit_tests(FORCE_SSE2);
+    //run_unit_tests(FORCE_SSE3);
+    //run_unit_tests(FORCE_SSSE3);
+    //run_unit_tests(FORCE_SSE41);
+    //run_unit_tests(FORCE_SSE42);
+    //run_unit_tests(FORCE_AVX);
 
-    float_buffer srcBuffer(size);
-    float_buffer dstBuffer(size);
-
-    run_all(math(FORCE_FPU), srcBuffer, dstBuffer);
-    run_all(math(FORCE_MMX), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSE), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSE2), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSE3), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSSE3), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSE41), srcBuffer, dstBuffer);
-    run_all(math(FORCE_SSE42), srcBuffer, dstBuffer);
-    run_all(math(FORCE_AVX), srcBuffer, dstBuffer);
+    return 0;
 }

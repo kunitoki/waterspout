@@ -31,6 +31,26 @@
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_FPU_H__
 
 
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+struct disable_fpu_denormals
+{
+    disable_fpu_denormals()
+    {
+        disable_floating_point_assertions;
+    }
+
+    ~disable_fpu_denormals()
+    {
+        enable_floating_point_assertions;
+    }
+};
+
+
 //==============================================================================
 
 //------------------------------------------------------------------------------
@@ -62,9 +82,23 @@ public:
         float* src_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        for (uint32_t i = 0; i < size; ++i)
         {
           *src_buffer++ = 0.0f;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void set_buffer(
+        float* src_buffer,
+        uint32_t size,
+        float value) const
+    {
+        for (uint32_t i = 0; i < size; ++i)
+        {
+          *src_buffer++ = value;
         }
     }
 
@@ -76,10 +110,12 @@ public:
         uint32_t size,
         float gain) const
     {
-        for (int i = 0; i < size; ++i)
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32_t i = 0; i < size; ++i)
         {
-          *src_buffer *= gain;
-          undernormalize(*src_buffer);
+          *src_buffer = *src_buffer * gain;
+          undenormalize(*src_buffer);
           ++src_buffer;
         }
     }
@@ -92,7 +128,7 @@ public:
         float* dst_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        for (uint32_t i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer++;
         }
@@ -107,7 +143,7 @@ public:
         float* dst_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        for (uint32_t i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
         }
@@ -122,7 +158,7 @@ public:
         float* dst_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        for (uint32_t i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
         }
@@ -137,10 +173,12 @@ public:
         float* dst_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32_t i = 0; i < size; ++i)
         {
           *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
-          undernormalize(*dst_buffer);
+          undenormalize(*dst_buffer);
           ++dst_buffer;
         }
     }
@@ -154,10 +192,12 @@ public:
         float* dst_buffer,
         uint32_t size) const
     {
-        for (int i = 0; i < size; ++i)
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32_t i = 0; i < size; ++i)
         {
           *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
-          undernormalize(*dst_buffer);
+          undenormalize(*dst_buffer);
           ++dst_buffer;
         }
     }
