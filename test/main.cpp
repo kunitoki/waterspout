@@ -1,4 +1,4 @@
-#include "../src/waterspout.cpp"
+#include <waterspout.h>
 #include <iostream>
 
 using namespace waterspout;
