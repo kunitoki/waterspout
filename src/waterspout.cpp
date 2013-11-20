@@ -149,11 +149,14 @@ uint32_t cpu_extended_features()
  *             contain the name of the processor.
  */
 
-void cpu_processor_name(char* name)
+std::string cpu_processor_name()
 {
+  char name[13];
   name[12] = 0;
   uint32_t max_op;
   cpuid(0, max_op, (uint32_t&)name[0], (uint32_t&)name[8], (uint32_t&)name[4]);
+
+  return std::string(name);
 }
 
 //------------------------------------------------------------------------------
@@ -240,7 +243,8 @@ namespace logger_detail_ {
 //------------------------------------------------------------------------------
 
 #ifndef WATERSPOUT_LOG_FORMAT
-  #define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
+  //#define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
+  #define WATERSPOUT_LOG_FORMAT  Waterspout LOG>
 #endif
 
 #ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
@@ -343,7 +347,7 @@ void logger::use_file(std::string const& filepath)
         else
         {
             std::stringstream s;
-            s << "cannot redirect log to file " << file_output_;
+            s << "logger: cannot redirect log to file " << file_output_;
             throw std::runtime_error(s.str());
         }
     }
@@ -577,12 +581,11 @@ math_factory::math_factory(int flags, bool fallback)
 
 
 #if defined(WATERSPOUT_DEBUG) && 0
-    char procname[13];
-    cpu_processor_name(procname);
-    WATERSPOUT_LOG_DEBUG(math_factory) << "Processor name: " << procname;
+    WATERSPOUT_LOG_DEBUG(math_factory) << "Processor name: "
+        << cpu_processor_name();
 
     WATERSPOUT_LOG_DEBUG(math_factory) << "Processor endianess: "
-      << (cpu_endianness() == ENDIAN_BIG ? "bigendian" : "littlendian");
+        << (cpu_endianness() == ENDIAN_BIG ? "bigendian" : "littlendian");
 
     WATERSPOUT_LOG_DEBUG(math_factory) << "Processor features:";
     WATERSPOUT_LOG_DEBUG(math_factory)
@@ -638,10 +641,6 @@ math_factory::math_factory(int flags, bool fallback)
 
 math_factory::~math_factory()
 {
-    if (math_ != NULL)
-    {
-        delete math_;
-    }
 }
 
 

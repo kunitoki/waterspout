@@ -40,6 +40,8 @@ using namespace waterspout;
 
 namespace {
 
+    static const uint32_t num_runs = 50;
+
     void prepare_buffers(float* a, float* b, uint32_t size)
     {
         for (int i = 0; i < size; ++i)
@@ -63,50 +65,57 @@ namespace {
     double measure_buffer_clear(const math_factory& factory, float* srcBuffer, uint32_t size)
     {
         timer t;
-        factory->clear_buffer(srcBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->clear_buffer(srcBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffer_scale(const math_factory& factory, float* srcBuffer, uint32_t size, float gain)
     {
         timer t;
-        factory->scale_buffer(srcBuffer, size, gain);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->scale_buffer(srcBuffer, size, gain);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffer_copy(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
-        factory->copy_buffer(srcBuffer, dstBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->copy_buffer(srcBuffer, dstBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffers_add(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
-        factory->add_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->add_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffers_subtract(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
-        factory->subtract_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->subtract_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffers_multiply(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
-        factory->multiply_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->multiply_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     double measure_buffers_divide(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
-        factory->divide_buffers(srcBuffer, srcBuffer, dstBuffer, size);
-        return t.clock_elapsed();
+        for (int i = 0; i < num_runs; ++i)
+            factory->divide_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed() / (double)num_runs;
     }
 
     void print_elapsed(const math_factory& factory, const char* function, double elapsed)
@@ -161,6 +170,9 @@ namespace {
 int main(int argc, char* argv[])
 {
     const uint32_t size = 1024 * 1024;
+
+    scoped_ptr<int> ptr(new int);
+    ptr = new int;
 
     float_buffer srcBuffer(size);
     float_buffer dstBuffer(size);

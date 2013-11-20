@@ -68,16 +68,16 @@ public:
     //--------------------------------------------------------------------------
 
     void copy_buffer(
-        float* srcBuffer,
-        float* dstBuffer,
+        float* src_buffer,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x1F);
 
         if (size < MIN_AVX_SAMPLES ||
-              ((ptrdiff_t)dstBuffer & 0x0F) != align_bytes)
+              ((ptrdiff_t)dst_buffer & 0x1F) != align_bytes)
         {
-            math_sse42::copy_buffer(srcBuffer, dstBuffer, size);
+            math_sse42::copy_buffer(src_buffer, dst_buffer, size);
         } 
         else 
         { 
@@ -86,41 +86,41 @@ public:
             // Copy unaligned head
             switch (align_bytes >> 3)
             {
-            case 1: --size; *dstBuffer++ = *srcBuffer++;
-            case 2: --size; *dstBuffer++ = *srcBuffer++;
-            case 3: --size; *dstBuffer++ = *srcBuffer++;
-            case 4: --size; *dstBuffer++ = *srcBuffer++;
-            case 5: --size; *dstBuffer++ = *srcBuffer++;
-            case 6: --size; *dstBuffer++ = *srcBuffer++;
-            case 7: --size; *dstBuffer++ = *srcBuffer++;
+            case 1: --size; *dst_buffer++ = *src_buffer++;
+            case 2: --size; *dst_buffer++ = *src_buffer++;
+            case 3: --size; *dst_buffer++ = *src_buffer++;
+            case 4: --size; *dst_buffer++ = *src_buffer++;
+            case 5: --size; *dst_buffer++ = *src_buffer++;
+            case 6: --size; *dst_buffer++ = *src_buffer++;
+            case 7: --size; *dst_buffer++ = *src_buffer++;
             }  
 
             // Copy with simd
-            __m256* sourceVector = (__m256*)srcBuffer;
-            __m256* destVector = (__m256*)dstBuffer;
+            __m256* source_vector = (__m256*)src_buffer;
+            __m256* dest_vector = (__m256*)dst_buffer;
 
             int vector_count = size >> 3;
             while (vector_count--)
             {
-                *destVector = *sourceVector;
+                *dest_vector = *source_vector;
 
-                ++destVector;
-                ++sourceVector;
+                ++dest_vector;
+                ++source_vector;
             }
 
             // Handle unaligned leftovers
-            dstBuffer = (float*)destVector;
-            srcBuffer = (float*)sourceVector;
+            src_buffer = (float*)source_vector;
+            dst_buffer = (float*)dest_vector;
 
             switch (size & 7)
             {
-            case 7: *dstBuffer++ = *srcBuffer++;
-            case 6: *dstBuffer++ = *srcBuffer++;
-            case 5: *dstBuffer++ = *srcBuffer++;
-            case 4: *dstBuffer++ = *srcBuffer++;
-            case 3: *dstBuffer++ = *srcBuffer++;
-            case 2: *dstBuffer++ = *srcBuffer++;
-            case 1: *dstBuffer++ = *srcBuffer++;
+            case 7: *dst_buffer++ = *src_buffer++;
+            case 6: *dst_buffer++ = *src_buffer++;
+            case 5: *dst_buffer++ = *src_buffer++;
+            case 4: *dst_buffer++ = *src_buffer++;
+            case 3: *dst_buffer++ = *src_buffer++;
+            case 2: *dst_buffer++ = *src_buffer++;
+            case 1: *dst_buffer++ = *src_buffer++;
             }  
         }
     }

@@ -283,6 +283,10 @@
 #define assertfalse \
     do { assert(false); } while(0);
 
+// check if a pointer is aligned
+#define is_aligned(ptr, byte_count) \
+    (((uintptr_t)(const void*)(ptr)) % (byte_count) == 0)
+
 // add this to your float to avoid denormalized numbers
 #define antidenormal 1.0E-25f
 
@@ -324,6 +328,76 @@ typedef noncopyable_detail_::noncopyable noncopyable;
 
 //------------------------------------------------------------------------------
 
+/**
+ * Scoped ptr
+ */
+
+template<class T>
+class scoped_ptr
+{
+public:
+    explicit scoped_ptr()
+        : object_ptr_(NULL)
+    {
+    }
+
+    scoped_ptr(T* object_ptr)
+        : object_ptr_(object_ptr)
+    {
+    }
+
+    ~scoped_ptr()
+    {
+        if (object_ptr_ != NULL)
+        {
+            delete object_ptr_;
+        }
+    }
+
+    forcedinline T* get() const
+    {
+        return object_ptr_;
+    }
+
+    forcedinline T* operator->() const
+    {
+        return object_ptr_;
+    }
+
+    forcedinline bool operator==(void* object_ptr) const
+    {
+        return object_ptr_ == object_ptr;
+    }
+
+    forcedinline bool operator!=(void* object_ptr) const
+    {
+        return object_ptr_ != object_ptr;
+    }
+
+    forcedinline void operator=(T* object_ptr)
+    {
+        if (object_ptr_ != NULL)
+        {
+            delete object_ptr_;
+            object_ptr_ = NULL;
+        }
+
+        object_ptr_ = object_ptr;
+    }
+
+private:
+    T* object_ptr_;
+};
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+/**
+ * Singleton class
+ */
+
 template <typename T>
 class create_using_new_
 {
@@ -346,23 +420,23 @@ private:
     union max_align
     {
         char t_[sizeof(T)];
-        short int shortInt_;
+        short int short_int_;
         int int_;
-        long int longInt_;
+        long int long_int_;
         float float_;
         double double_;
-        long double longDouble_;
+        long double long_double_;
         struct test_struct;
-        int test_struct::*pMember_;
-        int (test_struct::*pMemberFn_)(int);
+        int test_struct::*ptr_member_;
+        int (test_struct::*ptr_nember_func_)(int);
     };
 
 public:
     static T* create()
     {
-        static max_align staticMemory;
+        static max_align static_memory;
 
-        return new(&staticMemory) T;
+        return new(&static_memory) T;
     }
 
 #if defined(WATERSPOUT_COMPILER_SUN)
@@ -388,7 +462,7 @@ template <typename T,
     friend class create_policy<T>;
 #endif
 
-    static T* pInstance_;
+    static T* ptr_instance_;
     static bool destroyed_;
 
     singleton(const singleton &rhs);
@@ -401,8 +475,8 @@ template <typename T,
 
     static void destroy_singleton()
     {
-        create_policy<T>::destroy(pInstance_);
-        pInstance_ = 0;
+        create_policy<T>::destroy(ptr_instance_);
+        ptr_instance_ = 0;
         destroyed_ = true;
     }
 
@@ -412,9 +486,9 @@ protected:
 public:
     static T& instance()
     {
-        if (! pInstance_)
+        if (! ptr_instance_)
         {
-            if (! pInstance_)
+            if (! ptr_instance_)
             {
                 if (destroyed_)
                 {
@@ -423,21 +497,24 @@ public:
                 }
                 else
                 {
-                    pInstance_ = create_policy<T>::create();
+                    ptr_instance_ = create_policy<T>::create();
 
                     // register destruction
                     std::atexit(&destroy_singleton);
                 }
             }
         }
-        return *pInstance_;
+        return *ptr_instance_;
     }
 };
 
 template <typename T,
-          template <typename U> class create_policy> T* singleton<T, create_policy>::pInstance_ = NULL;
+          template <typename U> class create_policy>
+T* singleton<T, create_policy>::ptr_instance_ = NULL;
+
 template <typename T,
-          template <typename U> class create_policy> bool singleton<T, create_policy>::destroyed_ = false;
+          template <typename U> class create_policy>
+bool singleton<T, create_policy>::destroyed_ = false;
 
 
 //==============================================================================
@@ -680,25 +757,29 @@ namespace logger_detail_ {
     class debug : public logger_detail_::base_log_debug {
     public:
         debug() : logger_detail_::base_log_debug() {}
-        debug(const char* object_name) : logger_detail_::base_log_debug(object_name) {}
+        debug(const char* object_name)
+            : logger_detail_::base_log_debug(object_name) {}
     };
 
     class warn : public logger_detail_::base_log_warn {
     public:
         warn() : logger_detail_::base_log_warn() {}
-        warn(const char* object_name) : logger_detail_::base_log_warn(object_name) {}
+        warn(const char* object_name)
+            : logger_detail_::base_log_warn(object_name) {}
     };
 
     class error : public logger_detail_::base_log_error {
     public:
         error() : logger_detail_::base_log_error() {}
-        error(const char* object_name) : logger_detail_::base_log_error(object_name) {}
+        error(const char* object_name)
+            : logger_detail_::base_log_error(object_name) {}
     };
 
     class info : public logger_detail_::base_log_info {
     public:
         info() : logger_detail_::base_log_info() {}
-        info(const char* object_name) : logger_detail_::base_log_info(object_name) {}
+        info(const char* object_name)
+            : logger_detail_::base_log_info(object_name) {}
     };
 
 } // namespace detail
@@ -763,7 +844,7 @@ public:
             stop();
         }
 
-        return ((double) (cpu_end_ - cpu_start_)) / CLOCKS_PER_SEC * 1000.0;
+        return ((double)(cpu_end_ - cpu_start_)) / CLOCKS_PER_SEC * 1000.0;
     }
 
     double clock_elapsed()
@@ -915,7 +996,7 @@ typedef aligned_buffer<double, 32> double_buffer;
  * Base math class interface
  */
 
-class math : private noncopyable
+class math_interface_ : private noncopyable
 {
 public:
     // Define a name for the math implementation
@@ -923,49 +1004,49 @@ public:
 
     // Mono buffer manipulation
     virtual void clear_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size) const = 0;
 
     virtual void scale_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size,
         float gain) const = 0;
 
     virtual void copy_buffer(
-        float* srcBuffer,
-        float* dstBuffer,
+        float* src_buffer,
+        float* dst_buffer,
         uint32_t size) const = 0;
 
     // Mono buffer arithmetic
     virtual void add_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const = 0;
 
     virtual void subtract_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const = 0;
 
     virtual void multiply_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const = 0;
 
     virtual void divide_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const = 0;
 
 
-    virtual ~math() { }
+    virtual ~math_interface_() { }
 
 protected:
-    math() { }
+    math_interface_() { }
 };
 
 
@@ -1000,21 +1081,24 @@ enum MathFlags
 class math_factory : private noncopyable
 {
 public:
+    // Construct a math factory
     math_factory(int flag=AUTODETECT, bool fallback=true);
+
+    // Destructor
     virtual ~math_factory();
 
-    // returns the current arch name
+    // Returns the current arch name
     const char* name() const;
 
-    // operate on the underlying math object
-    forcedinline math* operator->() const
+    // Operate on the underlying math object
+    forcedinline math_interface_* operator->() const
     {
-        return math_;
+        return math_.get();
     }
 
 protected:
 
-    math* math_;
+    scoped_ptr<math_interface_> math_;
 };
 
 

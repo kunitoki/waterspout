@@ -35,6 +35,25 @@
 
 //------------------------------------------------------------------------------
 
+#define sse_unroll_head_3(s) \
+    switch (align_bytes >> 2) \
+    { \
+    case 1: s; \
+    case 2: s; \
+    case 3: s; \
+    }
+
+#define sse_unroll_tail_3(s) \
+    switch (size & 3) \
+    { \
+    case 3: s; \
+    case 2: s; \
+    case 1: s; \
+    }
+
+
+//------------------------------------------------------------------------------
+
 /**
  * Specific SSE math class elaborating on __m128 buffers
  */
@@ -68,45 +87,40 @@ public:
     //--------------------------------------------------------------------------
 
     void clear_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size) const
     {
         if (size < MIN_SSE_SAMPLES)
         {
-            math_mmx::clear_buffer(srcBuffer, size);
+            math_mmx::clear_buffer(src_buffer, size);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1: --size; *srcBuffer++ = 0.0f;
-            case 2: --size; *srcBuffer++ = 0.0f;
-            case 3: --size; *srcBuffer++ = 0.0f;
-            }
+            sse_unroll_head_3(
+                --size;
+                *src_buffer++ = 0.0f;
+            );
 
             // Clear with simd
-            __m128* vectorBuffer = (__m128 *)srcBuffer;
+            __m128* vector_buffer = (__m128 *)src_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorBuffer++ = _mm_setzero_ps();
+                *vector_buffer++ = _mm_setzero_ps();
             }
 
             // Handle any unaligned leftovers
-            srcBuffer = (float*)vectorBuffer;
+            src_buffer = (float*)vector_buffer;
 
-            switch (size & 3)
-            {
-            case 3: *srcBuffer++ = 0.0f;
-            case 2: *srcBuffer++ = 0.0f;
-            case 1: *srcBuffer++ = 0.0f;
-            }
+            sse_unroll_tail_3(
+                *src_buffer++ = 0.0f;
+            );
         }
     }
 
@@ -114,76 +128,50 @@ public:
     //--------------------------------------------------------------------------
 
     void scale_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size,
         float gain) const
     {
         if (size < MIN_SSE_SAMPLES)
         {
-            math_mmx::scale_buffer(srcBuffer, size, gain);
+            math_mmx::scale_buffer(src_buffer, size, gain);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1:
+            sse_unroll_head_3(
                 --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 2:
-                --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 3:
-                --size;
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            }
+                *src_buffer *= gain;
+                undernormalize(*src_buffer);
+                ++src_buffer;
+            );
 
             // Scale with simd
             const disable_sse_denormals disable_denormals;
 
             const __m128 vscale =_mm_set1_ps(gain);
 
-            __m128* vectorBuffer = (__m128*)srcBuffer;
+            __m128* vector_buffer = (__m128*)src_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorBuffer = _mm_mul_ps(*vectorBuffer, vscale);
-                ++vectorBuffer;
+                *vector_buffer = _mm_mul_ps(*vector_buffer, vscale);
+                ++vector_buffer;
             }
 
             // Handle any unaligned leftovers
-            srcBuffer = (float*)vectorBuffer;
+            src_buffer = (float*)vector_buffer;
 
-            switch (size & 3)
-            {
-            case 3:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 2:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-
-            case 1:
-                *srcBuffer *= gain;
-                undernormalize(*srcBuffer);
-                ++srcBuffer;
-            }
+            sse_unroll_tail_3(
+                *src_buffer *= gain;
+                undernormalize(*src_buffer);
+                ++src_buffer;
+            );
         }
     }
 
@@ -191,52 +179,47 @@ public:
     //--------------------------------------------------------------------------
 
     void copy_buffer(
-        float* srcBuffer,
-        float* dstBuffer,
+        float* src_buffer,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
-              ((ptrdiff_t)dstBuffer & 0x0F) != align_bytes)
+              ((ptrdiff_t)dst_buffer & 0x0F) != align_bytes)
         {
-            math_mmx::copy_buffer(srcBuffer, dstBuffer, size);
+            math_mmx::copy_buffer(src_buffer, dst_buffer, size);
         } 
         else 
         { 
             assert(size >= MIN_SSE_SIZE);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1: --size; *dstBuffer++ = *srcBuffer++;
-            case 2: --size; *dstBuffer++ = *srcBuffer++;
-            case 3: --size; *dstBuffer++ = *srcBuffer++;
-            }  
+            sse_unroll_head_3(
+                --size;
+                *dst_buffer++ = *src_buffer++;
+            );
 
             // Copy with simd
-            __m128* sourceVector = (__m128*)srcBuffer;
-            __m128* destVector = (__m128*)dstBuffer;
+            __m128* source_vector = (__m128*)src_buffer;
+            __m128* dest_vector = (__m128*)dst_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *destVector = *sourceVector;
+                *dest_vector = *source_vector;
 
-                ++destVector;
-                ++sourceVector;
+                ++dest_vector;
+                ++source_vector;
             }
 
             // Handle unaligned leftovers
-            dstBuffer = (float*)destVector;
-            srcBuffer = (float*)sourceVector;
+            src_buffer = (float*)source_vector;
+            dst_buffer = (float*)dest_vector;
 
-            switch (size & 3)
-            {
-            case 3: *dstBuffer++ = *srcBuffer++;
-            case 2: *dstBuffer++ = *srcBuffer++;
-            case 1: *dstBuffer++ = *srcBuffer++;
-            }
+            sse_unroll_tail_3(
+                *dst_buffer++ = *src_buffer++;
+            );
         }
     }
 
@@ -244,54 +227,53 @@ public:
     //--------------------------------------------------------------------------
 
     void add_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dstBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)srcBufferA & 0x0F) ||
-             align_bytes != ((ptrdiff_t)srcBufferB & 0x0F)))
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::add_buffers(srcBufferA, srcBufferB, dstBuffer, size);
+            math_mmx::add_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1: --size; *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            case 2: --size; *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            case 3: --size; *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            }
+            sse_unroll_head_3(
+                --size;
+                *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
+            );
 
             // Scale with simd
-            __m128* vectorBufferA = (__m128*)srcBufferA;
-            __m128* vectorBufferB = (__m128*)srcBufferB;
-            __m128* vectorDstBuffer = (__m128*)dstBuffer;
+            __m128* vector_buffer_a = (__m128*)src_buffer_a;
+            __m128* vector_buffer_b = (__m128*)src_buffer_b;
+            __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorDstBuffer++ =
-                  _mm_add_ps(*vectorBufferA++, *vectorBufferB++);
+                *vector_dst_buffer =
+                  _mm_add_ps(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
             }
 
             // Handle any unaligned leftovers
-            srcBufferA = (float*)vectorBufferA;
-            srcBufferB = (float*)vectorBufferB;
-            dstBuffer = (float*)vectorDstBuffer;
+            src_buffer_a = (float*)vector_buffer_a;
+            src_buffer_b = (float*)vector_buffer_b;
+            dst_buffer = (float*)vector_dst_buffer;
 
-            switch (size & 3)
-            {
-            case 3: *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            case 2: *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            case 1: *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
-            }
+            sse_unroll_tail_3(
+                *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
+            );
         }
     }
 
@@ -299,54 +281,53 @@ public:
     //--------------------------------------------------------------------------
 
     void subtract_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dstBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)srcBufferA & 0x0F) ||
-             align_bytes != ((ptrdiff_t)srcBufferB & 0x0F)))
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::subtract_buffers(srcBufferA, srcBufferB, dstBuffer, size);
+            math_mmx::subtract_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1: --size; *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            case 2: --size; *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            case 3: --size; *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            }
+            sse_unroll_head_3(
+                --size;
+                *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
+            );
 
             // Scale with simd
-            __m128* vectorBufferA = (__m128*)srcBufferA;
-            __m128* vectorBufferB = (__m128*)srcBufferB;
-            __m128* vectorDstBuffer = (__m128*)dstBuffer;
+            __m128* vector_buffer_a = (__m128*)src_buffer_a;
+            __m128* vector_buffer_b = (__m128*)src_buffer_b;
+            __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorDstBuffer++ =
-                  _mm_sub_ps(*vectorBufferA++, *vectorBufferB++);
+                *vector_dst_buffer =
+                  _mm_sub_ps(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
             }
 
             // Handle any unaligned leftovers
-            srcBufferA = (float*)vectorBufferA;
-            srcBufferB = (float*)vectorBufferB;
-            dstBuffer = (float*)vectorDstBuffer;
+            src_buffer_a = (float*)vector_buffer_a;
+            src_buffer_b = (float*)vector_buffer_b;
+            dst_buffer = (float*)vector_dst_buffer;
 
-            switch (size & 3)
-            {
-            case 3: *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            case 2: *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            case 1: *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
-            }
+            sse_unroll_tail_3(
+                *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
+            );
         }
     }
 
@@ -354,77 +335,59 @@ public:
     //--------------------------------------------------------------------------
 
     void multiply_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dstBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)srcBufferA & 0x0F) ||
-             align_bytes != ((ptrdiff_t)srcBufferB & 0x0F)))
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::multiply_buffers(srcBufferA, srcBufferB, dstBuffer, size);
+            math_mmx::multiply_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1:
+            sse_unroll_head_3(
                 --size;
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 2:
-                --size;
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 3:
-                --size;
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            }
+                *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
+                undernormalize(*dst_buffer);
+                ++dst_buffer;
+            );
 
             // Scale with simd
             const disable_sse_denormals disable_denormals;
 
-            __m128* vectorBufferA = (__m128*)srcBufferA;
-            __m128* vectorBufferB = (__m128*)srcBufferB;
-            __m128* vectorDstBuffer = (__m128*)dstBuffer;
+            __m128* vector_buffer_a = (__m128*)src_buffer_a;
+            __m128* vector_buffer_b = (__m128*)src_buffer_b;
+            __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorDstBuffer++ =
-                  _mm_mul_ps(*vectorBufferA++, *vectorBufferB++);
+                *vector_dst_buffer =
+                  _mm_mul_ps(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
             }
 
             // Handle any unaligned leftovers
-            srcBufferA = (float*)vectorBufferA;
-            srcBufferB = (float*)vectorBufferB;
-            dstBuffer = (float*)vectorDstBuffer;
+            src_buffer_a = (float*)vector_buffer_a;
+            src_buffer_b = (float*)vector_buffer_b;
+            dst_buffer = (float*)vector_dst_buffer;
 
-            switch (size & 3)
-            {
-            case 3:
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 2:
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 1:
-                *dstBuffer = *srcBufferA++ * *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            }
+            sse_unroll_tail_3(
+                *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
+                undernormalize(*dst_buffer);
+                ++dst_buffer;
+            );
         }
     }
 
@@ -432,81 +395,69 @@ public:
     //--------------------------------------------------------------------------
 
     void divide_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dstBuffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)srcBufferA & 0x0F) ||
-             align_bytes != ((ptrdiff_t)srcBufferB & 0x0F)))
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::divide_buffers(srcBufferA, srcBufferB, dstBuffer, size);
+            math_mmx::divide_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
             assert(size >= MIN_SSE_SIZE);
 
             // Copy unaligned head
-            switch (align_bytes >> 2)
-            {
-            case 1:
+           sse_unroll_head_3(
                 --size;
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 2:
-                --size;
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 3:
-                --size;
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            }
+                *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
+                undernormalize(*dst_buffer);
+                ++dst_buffer;
+            );
 
             // Scale with simd
             const disable_sse_denormals disable_denormals;
 
-            __m128* vectorBufferA = (__m128*)srcBufferA;
-            __m128* vectorBufferB = (__m128*)srcBufferB;
-            __m128* vectorDstBuffer = (__m128*)dstBuffer;
+            __m128* vector_buffer_a = (__m128*)src_buffer_a;
+            __m128* vector_buffer_b = (__m128*)src_buffer_b;
+            __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
             int vector_count = size >> 2;
             while (vector_count--)
             {
-                *vectorDstBuffer++ =
-                  _mm_div_ps(*vectorBufferA++, *vectorBufferB++);
+                *vector_dst_buffer =
+                  _mm_div_ps(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
             }
 
             // Handle any unaligned leftovers
-            srcBufferA = (float*)vectorBufferA;
-            srcBufferB = (float*)vectorBufferB;
-            dstBuffer = (float*)vectorDstBuffer;
+            src_buffer_a = (float*)vector_buffer_a;
+            src_buffer_b = (float*)vector_buffer_b;
+            dst_buffer = (float*)vector_dst_buffer;
 
-            switch (size & 3)
-            {
-            case 3:
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 2:
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            case 1:
-                *dstBuffer = *srcBufferA++ / *srcBufferB++;
-                undernormalize(*dstBuffer);
-                ++dstBuffer;
-            }
+            sse_unroll_tail_3(
+                *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
+                undernormalize(*dst_buffer);
+                ++dst_buffer;
+            );
         }
     }
 
 };
+
+
+//------------------------------------------------------------------------------
+
+#undef sse_unroll_head_3
+#undef sse_unroll_tail_3
 
 
 #endif

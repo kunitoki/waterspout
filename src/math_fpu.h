@@ -39,7 +39,7 @@
  * FPU math clas that provides floating point operations as fallback
  */
 
-class math_fpu : public math
+class math_fpu : public math_interface_
 {
 public:
 
@@ -59,12 +59,12 @@ public:
     //--------------------------------------------------------------------------
 
     void clear_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *srcBuffer++ = 0.0f;
+          *src_buffer++ = 0.0f;
         }
     }
 
@@ -72,15 +72,15 @@ public:
     //--------------------------------------------------------------------------
 
     void scale_buffer(
-        float* srcBuffer,
+        float* src_buffer,
         uint32_t size,
         float gain) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *srcBuffer *= gain;
-          undernormalize(*srcBuffer);
-          ++srcBuffer;
+          *src_buffer *= gain;
+          undernormalize(*src_buffer);
+          ++src_buffer;
         }
     }
 
@@ -88,13 +88,13 @@ public:
     //--------------------------------------------------------------------------
 
     void copy_buffer(
-        float* srcBuffer,
-        float* dstBuffer,
+        float* src_buffer,
+        float* dst_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer++ = *srcBuffer++;
+          *dst_buffer++ = *src_buffer++;
         }
     }
 
@@ -102,14 +102,14 @@ public:
     //--------------------------------------------------------------------------
 
     void add_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer++ = *srcBufferA++ + *srcBufferB++;
+          *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
         }
     }
 
@@ -117,14 +117,14 @@ public:
     //--------------------------------------------------------------------------
 
     void subtract_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer++ = *srcBufferA++ - *srcBufferB++;
+          *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
         }
     }
 
@@ -132,16 +132,16 @@ public:
     //--------------------------------------------------------------------------
 
     void multiply_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer = *srcBufferA++ * *srcBufferB++;
-          undernormalize(*dstBuffer);
-          ++dstBuffer;
+          *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
+          undernormalize(*dst_buffer);
+          ++dst_buffer;
         }
     }
 
@@ -149,16 +149,16 @@ public:
     //--------------------------------------------------------------------------
 
     void divide_buffers(
-        float* srcBufferA,
-        float* srcBufferB,
-        float* dstBuffer,
+        float* src_buffer_a,
+        float* src_buffer_b,
+        float* dst_buffer,
         uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer = *srcBufferA++ / *srcBufferB++;
-          undernormalize(*dstBuffer);
-          ++dstBuffer;
+          *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
+          undernormalize(*dst_buffer);
+          ++dst_buffer;
         }
     }
 
