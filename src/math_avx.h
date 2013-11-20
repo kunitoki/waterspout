@@ -45,7 +45,7 @@ public:
 
     //--------------------------------------------------------------------------
 
-    const char* name() { return "AVX"; }
+    const char* name() const { return "AVX"; }
 
 
     //--------------------------------------------------------------------------
@@ -67,7 +67,10 @@ public:
     
     //--------------------------------------------------------------------------
 
-    void copy_buffer(float* srcBuffer, float* dstBuffer, uint32_t size)
+    void copy_buffer(
+        float* srcBuffer,
+        float* dstBuffer,
+        uint32_t size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)srcBuffer & 0x0F);
 

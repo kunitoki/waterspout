@@ -45,7 +45,7 @@ public:
 
     //--------------------------------------------------------------------------
 
-    const char* name() { return "FPU"; }
+    const char* name() const { return "FPU"; }
 
 
     //--------------------------------------------------------------------------
@@ -60,7 +60,7 @@ public:
 
     void clear_buffer(
         float* srcBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
@@ -74,12 +74,13 @@ public:
     void scale_buffer(
         float* srcBuffer,
         uint32_t size,
-        float gain)
+        float gain) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *srcBuffer++ *= gain;
-          undernormalize(srcBuffer[i]);
+          *srcBuffer *= gain;
+          undernormalize(*srcBuffer);
+          ++srcBuffer;
         }
     }
 
@@ -89,7 +90,7 @@ public:
     void copy_buffer(
         float* srcBuffer,
         float* dstBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
@@ -104,7 +105,7 @@ public:
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
@@ -119,7 +120,7 @@ public:
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
@@ -134,12 +135,13 @@ public:
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer++ = *srcBufferA++ * *srcBufferB++;
-          undernormalize(dstBuffer[i]);
+          *dstBuffer = *srcBufferA++ * *srcBufferB++;
+          undernormalize(*dstBuffer);
+          ++dstBuffer;
         }
     }
 
@@ -150,12 +152,13 @@ public:
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size)
+        uint32_t size) const
     {
         for (int i = 0; i < size; ++i)
         {
-          *dstBuffer++ = *srcBufferA++ / *srcBufferB++;
-          undernormalize(dstBuffer[i]);
+          *dstBuffer = *srcBufferA++ / *srcBufferB++;
+          undernormalize(*dstBuffer);
+          ++dstBuffer;
         }
     }
 

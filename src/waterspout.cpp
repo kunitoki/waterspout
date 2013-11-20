@@ -426,7 +426,7 @@ math_factory::math_factory(int flags, bool fallback)
 #endif
 
 
-#if defined(WATERSPOUT_DEBUG)
+#if defined(WATERSPOUT_DEBUG) && 0
     char procname[13];
     cpu_processor_name(procname);
     std::cout << "Processor name: " << procname << std::endl;
@@ -485,7 +485,7 @@ math_factory::~math_factory()
 
 //------------------------------------------------------------------------------
 
-const char* math_factory::name()
+const char* math_factory::name() const
 {
     if (_math != NULL)
     {

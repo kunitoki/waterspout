@@ -49,23 +49,106 @@ namespace {
         }
     }
 
-    double measure_buffer_copy(math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+    void check_buffers(const math_factory& factory, float* a, float* b, uint32_t size)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            if (a[i] != b[i])
+            {
+                std::cout << factory.name() << ": Copy is invalid !" << std::endl;
+            }
+        }
+    }
+
+    double measure_buffer_clear(const math_factory& factory, float* srcBuffer, uint32_t size)
+    {
+        timer t;
+        factory->clear_buffer(srcBuffer, size);
+        return t.clock_elapsed();
+    }
+
+    double measure_buffer_scale(const math_factory& factory, float* srcBuffer, uint32_t size, float gain)
+    {
+        timer t;
+        factory->scale_buffer(srcBuffer, size, gain);
+        return t.clock_elapsed();
+    }
+
+    double measure_buffer_copy(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
         timer t;
         factory->copy_buffer(srcBuffer, dstBuffer, size);
         return t.clock_elapsed();
     }
 
-
-    void check_buffers(const char* method, float* a, float* b, uint32_t size)
+    double measure_buffers_add(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
     {
-        for (int i = 0; i < size; ++i)
-        {
-            if (a[i] != b[i])
-            {
-                std::cout << method << ": Copy is invalid !" << std::endl;
-            }
-        }
+        timer t;
+        factory->add_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed();
+    }
+
+    double measure_buffers_subtract(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+    {
+        timer t;
+        factory->subtract_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed();
+    }
+
+    double measure_buffers_multiply(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+    {
+        timer t;
+        factory->multiply_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed();
+    }
+
+    double measure_buffers_divide(const math_factory& factory, float* srcBuffer, float* dstBuffer, uint32_t size)
+    {
+        timer t;
+        factory->divide_buffers(srcBuffer, srcBuffer, dstBuffer, size);
+        return t.clock_elapsed();
+    }
+
+    void print_elapsed(const math_factory& factory, const char* function, double elapsed)
+    {
+        std::cout << factory.name() << "(" << function << "): "
+                  << std::setprecision(32) << elapsed << " ms" << std::endl;
+    }
+
+    void run_all(const math_factory& factory, float_buffer& srcBuffer, float_buffer& dstBuffer)
+    {
+        double elapsed = 0.0;
+
+        prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+
+        elapsed =
+          measure_buffer_clear(factory, srcBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "clear_buffer", elapsed);
+
+        elapsed =
+          measure_buffer_scale(factory, srcBuffer.data(), srcBuffer.size(), 0.5f);
+        print_elapsed(factory, "scale_buffer", elapsed);
+
+        elapsed =
+          measure_buffer_copy(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "copy_buffer", elapsed);
+
+        elapsed =
+          measure_buffers_add(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "add_buffers", elapsed);
+
+        elapsed =
+          measure_buffers_subtract(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "subtract_buffers", elapsed);
+
+        elapsed =
+          measure_buffers_multiply(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "multiply_buffers", elapsed);
+
+        elapsed =
+          measure_buffers_divide(factory, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
+        print_elapsed(factory, "divide_buffers", elapsed);
+
     }
 
 } // end namespace
@@ -76,43 +159,13 @@ namespace {
 int main(int argc, char* argv[])
 {
     const uint32_t size = 1024 * 1024;
-    float_buffer srcBuffer(size), dstBuffer(size);
 
-    {
-        math_factory fpu(FORCE_FPU);
+    float_buffer srcBuffer(size);
+    float_buffer dstBuffer(size);
 
-        prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-
-        double elapsed =
-          measure_buffer_copy(fpu, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-
-        check_buffers(fpu.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << fpu.name() << ": " << std::setprecision(32) <<  elapsed << " " << srcBuffer.size() << std::endl;
-    }
-
-    {
-        math_factory sse(FORCE_SSE);
-
-        prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-
-        double elapsed =
-          measure_buffer_copy(sse, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-
-        check_buffers(sse.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << sse.name() << ": " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
-    }
-
-    {
-        math_factory avx(FORCE_AVX);
-
-        prepare_buffers(srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-
-        double elapsed =
-          measure_buffer_copy(avx, srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        
-        check_buffers(avx.name(), srcBuffer.data(), dstBuffer.data(), srcBuffer.size());
-        std::cout << avx.name() << ": " << std::setprecision(32) << elapsed << " " << srcBuffer.size() << std::endl;
-    }
+    run_all(math_factory(FORCE_FPU), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_SSE), srcBuffer, dstBuffer);
+    run_all(math_factory(FORCE_AVX), srcBuffer, dstBuffer);
     
     return 0;
 }

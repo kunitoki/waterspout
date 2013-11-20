@@ -468,47 +468,47 @@ class math
 {
 public:
     // Define a name for the math implementation
-    virtual const char* name() = 0;
+    virtual const char* name() const = 0;
 
     // Mono buffer manipulation
     virtual void clear_buffer(
         float* srcBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
     virtual void scale_buffer(
         float* srcBuffer,
         uint32_t size,
-        float gain) = 0;
+        float gain) const = 0;
 
     virtual void copy_buffer(
         float* srcBuffer,
         float* dstBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
     // Mono buffer arithmetic
     virtual void add_buffers(
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
     virtual void subtract_buffers(
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
     virtual void multiply_buffers(
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
     virtual void divide_buffers(
         float* srcBufferA,
         float* srcBufferB,
         float* dstBuffer,
-        uint32_t size) = 0;
+        uint32_t size) const = 0;
 
 
     virtual ~math() { }
@@ -550,13 +550,13 @@ class math_factory
 {
 public:
     math_factory(int flag=AUTODETECT, bool fallback=true);
-    ~math_factory();
+    virtual ~math_factory();
 
     // returns the current arch name
-    const char* name();
+    const char* name() const;
 
     // operate on the underlying math object
-    forcedinline math* operator->()
+    forcedinline math* operator->() const
     {
         return _math;
     }
