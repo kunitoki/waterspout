@@ -256,6 +256,9 @@ void check_buffers_are_equal(T* a, T* b, uint32 size)
 
 int main(int argc, char* argv[])
 {
+    unused(argc);
+    unused(argv);
+
     run_all_tests
 
     return 0;
