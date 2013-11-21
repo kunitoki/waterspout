@@ -34,22 +34,23 @@ int main(int argc, char* argv[])
   waterspout::math m;
   waterspout::float_buffer bufferA(100), bufferB(100);
 
-  m->clear_buffer(bufferB.data(), 100);
-  
   for (int i = 0; i < bufferA.size(); ++i)
   {
     bufferA[i] = i / 100.0f;
   }
 
-  m->copy_buffer(bufferA.data(), bufferB.data(), 100);
+  m->clear_buffer_float(bufferB.data(), 100);
+  
+  m->copy_buffer_float(bufferA.data(), bufferB.data(), 100);
 }
 ```
 
 References
 ----------
 
-All intrinsics:
+General:
   * http://software.intel.com/sites/products/documentation/studio/composer/en-us/2011Update/compiler_c/intref_cls/common/intref_bk_intrinsics.htm
+  * http://softpixel.com/~cwright/programming/simd/index.php
 
 MMX:
   * http://msdn.microsoft.com/it-it/library/ccky3awe(v=vs.90).aspx

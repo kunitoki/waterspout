@@ -31,8 +31,6 @@
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_MATH_FPU_H__
 
 
-
-
 //==============================================================================
 
 //------------------------------------------------------------------------------
@@ -63,6 +61,8 @@ class math_fpu : public math_interface_
 {
 public:
 
+    //==========================================================================
+
     //--------------------------------------------------------------------------
 
     const char* name() const { return "FPU"; }
@@ -76,46 +76,41 @@ public:
     }
 
 
+    //==========================================================================
+
     //--------------------------------------------------------------------------
 
-    void clear_buffer(
-        float* src_buffer,
-        uint32_t size) const
+    void clear_buffer_int32(
+        int32* src_buffer,
+        uint32 size) const
     {
-        for (uint32_t i = 0; i < size; ++i)
-        {
-          *src_buffer++ = 0.0f;
-        }
+        clear_buffer_generic(src_buffer, size);
     }
 
 
     //--------------------------------------------------------------------------
 
-    void set_buffer(
-        float* src_buffer,
-        uint32_t size,
-        float value) const
+    void set_buffer_int32(
+        int32* src_buffer,
+        uint32 size,
+        int32 value) const
     {
-        for (uint32_t i = 0; i < size; ++i)
-        {
-          *src_buffer++ = value;
-        }
+        set_buffer_generic(src_buffer, size, value);
     }
 
 
     //--------------------------------------------------------------------------
 
-    void scale_buffer(
-        float* src_buffer,
-        uint32_t size,
+    void scale_buffer_int32(
+        int32* src_buffer,
+        uint32 size,
         float gain) const
     {
         const disable_fpu_denormals disable_denormals;
 
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
-          *src_buffer = *src_buffer * gain;
-          undenormalize(*src_buffer);
+          *src_buffer = int32(*src_buffer * gain);
           ++src_buffer;
         }
     }
@@ -123,12 +118,118 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void copy_buffer(
+    void copy_buffer_int32(
+        int32* src_buffer,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        copy_buffer_generic(src_buffer, dst_buffer, size);
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void add_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        add_buffers_generic(src_buffer_a, src_buffer_b, dst_buffer, size);
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void subtract_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        subtract_buffers_generic(src_buffer_a, src_buffer_b, dst_buffer, size);
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void multiply_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *dst_buffer++ = *src_buffer_a++ * *src_buffer_b++;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void divide_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *dst_buffer++ = *src_buffer_a++ / *src_buffer_b++;
+        }
+    }
+
+
+    //==========================================================================
+
+    //--------------------------------------------------------------------------
+
+    void clear_buffer_float(
+        float* src_buffer,
+        uint32 size) const
+    {
+        clear_buffer_generic(src_buffer, size);
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void set_buffer_float(
+        float* src_buffer,
+        uint32 size,
+        float value) const
+    {
+        set_buffer_generic(src_buffer, size, value);
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void scale_buffer_float(
+        float* src_buffer,
+        uint32 size,
+        float gain) const
+    {
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *src_buffer = *src_buffer * gain;
+          undenormalizef(*src_buffer);
+          ++src_buffer;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void copy_buffer_float(
         float* src_buffer,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer++;
         }
@@ -137,13 +238,13 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void add_buffers(
+    void add_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
         }
@@ -152,13 +253,13 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void subtract_buffers(
+    void subtract_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
           *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
         }
@@ -167,18 +268,18 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void multiply_buffers(
+    void multiply_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const disable_fpu_denormals disable_denormals;
 
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
           *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
-          undenormalize(*dst_buffer);
+          undenormalizef(*dst_buffer);
           ++dst_buffer;
         }
     }
@@ -186,19 +287,91 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void divide_buffers(
+    void divide_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const disable_fpu_denormals disable_denormals;
 
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32 i = 0; i < size; ++i)
         {
           *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
-          undenormalize(*dst_buffer);
+          undenormalizef(*dst_buffer);
           ++dst_buffer;
+        }
+    }
+
+
+private:
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void clear_buffer_generic(
+        T* src_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *src_buffer++ = static_cast<T>(0);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void set_buffer_generic(
+        T* src_buffer,
+        uint32 size,
+        T value) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *src_buffer++ = value;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void copy_buffer_generic(
+        T* src_buffer,
+        T* dst_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *dst_buffer++ = *src_buffer++;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void add_buffers_generic(
+        T* src_buffer_a,
+        T* src_buffer_b,
+        T* dst_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void subtract_buffers_generic(
+        T* src_buffer_a,
+        T* src_buffer_b,
+        T* dst_buffer,
+        uint32 size) const
+    {
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
         }
     }
 

@@ -35,6 +35,27 @@
 
 //------------------------------------------------------------------------------
 
+#define sse_unroll_head(s) \
+    switch (align_bytes >> 2) \
+    { \
+    case 1: s; \
+    case 2: s; \
+    case 3: s; \
+    }
+
+#define sse_unroll_tail(s) \
+    switch (size & 3) \
+    { \
+    case 3: s; \
+    case 2: s; \
+    case 1: s; \
+    }
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
 struct disable_sse_denormals
 {
     disable_sse_denormals()
@@ -43,7 +64,7 @@ struct disable_sse_denormals
 
         old_mxcsr_ = _mm_getcsr();
 
-        static const uint32_t caps = cpu_features();
+        static const uint32 caps = cpu_features();
 
         if (caps & SSE2)
         {
@@ -76,27 +97,6 @@ struct disable_sse_denormals
 private:
     int old_mxcsr_;
 };
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-#define sse_unroll_head(s) \
-    switch (align_bytes >> 2) \
-    { \
-    case 1: s; \
-    case 2: s; \
-    case 3: s; \
-    }
-
-#define sse_unroll_tail(s) \
-    switch (size & 3) \
-    { \
-    case 3: s; \
-    case 2: s; \
-    case 1: s; \
-    }
 
 
 //------------------------------------------------------------------------------
@@ -133,13 +133,13 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void clear_buffer(
+    void clear_buffer_float(
         float* src_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         if (size < MIN_SSE_SAMPLES)
         {
-            math_mmx::clear_buffer(src_buffer, size);
+            math_mmx::clear_buffer_float(src_buffer, size);
         }
         else
         {
@@ -156,7 +156,7 @@ public:
             // Clear with simd
             __m128* vector_buffer = (__m128 *)src_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_buffer = _mm_setzero_ps();
@@ -176,14 +176,14 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void set_buffer(
+    void set_buffer_float(
         float* src_buffer,
-        uint32_t size,
+        uint32 size,
         float value) const
     {
         if (size < MIN_SSE_SAMPLES)
         {
-            math_mmx::set_buffer(src_buffer, size, value);
+            math_mmx::set_buffer_float(src_buffer, size, value);
         }
         else
         {
@@ -198,11 +198,10 @@ public:
             );
 
             // Clear with simd
-            __m128 vvalue = _mm_set_ps(value, value, value, value);
+            const __m128 vvalue = _mm_set_ps(value, value, value, value);
             __m128* vector_buffer = (__m128 *)src_buffer;
 
-
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_buffer = vvalue;
@@ -222,14 +221,14 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void scale_buffer(
+    void scale_buffer_float(
         float* src_buffer,
-        uint32_t size,
+        uint32 size,
         float gain) const
     {
         if (size < MIN_SSE_SAMPLES)
         {
-            math_mmx::scale_buffer(src_buffer, size, gain);
+            math_mmx::scale_buffer_float(src_buffer, size, gain);
         }
         else
         {
@@ -243,7 +242,7 @@ public:
             sse_unroll_head(
                 --size;
                 *src_buffer = *src_buffer * gain;
-                undenormalize(*src_buffer);
+                undenormalizef(*src_buffer);
                 ++src_buffer;
             );
 
@@ -251,7 +250,7 @@ public:
             const __m128 vscale =_mm_set1_ps(gain);
             __m128* vector_buffer = (__m128*)src_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_buffer = _mm_mul_ps(*vector_buffer, vscale);
@@ -263,7 +262,7 @@ public:
 
             sse_unroll_tail(
                 *src_buffer = *src_buffer * gain;
-                undenormalize(*src_buffer);
+                undenormalizef(*src_buffer);
                 ++src_buffer;
             );
         }
@@ -272,17 +271,17 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void copy_buffer(
+    void copy_buffer_float(
         float* src_buffer,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
 
         if (size < MIN_SSE_SAMPLES ||
               ((ptrdiff_t)dst_buffer & 0x0F) != align_bytes)
         {
-            math_mmx::copy_buffer(src_buffer, dst_buffer, size);
+            math_mmx::copy_buffer_float(src_buffer, dst_buffer, size);
         } 
         else 
         { 
@@ -298,7 +297,7 @@ public:
             __m128* source_vector = (__m128*)src_buffer;
             __m128* dest_vector = (__m128*)dst_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *dest_vector = *source_vector;
@@ -320,11 +319,11 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void add_buffers(
+    void add_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
@@ -332,7 +331,7 @@ public:
             (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
              align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::add_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
+            math_mmx::add_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
@@ -349,7 +348,7 @@ public:
             __m128* vector_buffer_b = (__m128*)src_buffer_b;
             __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_dst_buffer =
@@ -374,11 +373,11 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void subtract_buffers(
+    void subtract_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
@@ -386,7 +385,7 @@ public:
             (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
              align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::subtract_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
+            math_mmx::subtract_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
@@ -403,7 +402,7 @@ public:
             __m128* vector_buffer_b = (__m128*)src_buffer_b;
             __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_dst_buffer =
@@ -428,11 +427,11 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void multiply_buffers(
+    void multiply_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
@@ -440,7 +439,7 @@ public:
             (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
              align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::multiply_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
+            math_mmx::multiply_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
@@ -452,7 +451,7 @@ public:
             sse_unroll_head(
                 --size;
                 *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
-                undenormalize(*dst_buffer);
+                undenormalizef(*dst_buffer);
                 ++dst_buffer;
             );
 
@@ -461,7 +460,7 @@ public:
             __m128* vector_buffer_b = (__m128*)src_buffer_b;
             __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_dst_buffer =
@@ -479,7 +478,7 @@ public:
 
             sse_unroll_tail(
                 *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
-                undenormalize(*dst_buffer);
+                undenormalizef(*dst_buffer);
                 ++dst_buffer;
             );
         }
@@ -488,11 +487,11 @@ public:
 
     //--------------------------------------------------------------------------
 
-    void divide_buffers(
+    void divide_buffers_float(
         float* src_buffer_a,
         float* src_buffer_b,
         float* dst_buffer,
-        uint32_t size) const
+        uint32 size) const
     {
         const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
 
@@ -500,7 +499,7 @@ public:
             (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
              align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
         {
-            math_mmx::divide_buffers(src_buffer_a, src_buffer_b, dst_buffer, size);
+            math_mmx::divide_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
@@ -512,7 +511,7 @@ public:
             sse_unroll_head(
                 --size;
                 *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
-                undenormalize(*dst_buffer);
+                undenormalizef(*dst_buffer);
                 ++dst_buffer;
             );
 
@@ -521,7 +520,7 @@ public:
             __m128* vector_buffer_b = (__m128*)src_buffer_b;
             __m128* vector_dst_buffer = (__m128*)dst_buffer;
 
-            int vector_count = size >> 2;
+            uint32 vector_count = size >> 2;
             while (vector_count--)
             {
                 *vector_dst_buffer =
@@ -539,19 +538,13 @@ public:
 
             sse_unroll_tail(
                 *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
-                undenormalize(*dst_buffer);
+                undenormalizef(*dst_buffer);
                 ++dst_buffer;
             );
         }
     }
 
 };
-
-
-//------------------------------------------------------------------------------
-
-#undef sse_unroll_head
-#undef sse_unroll_tail
 
 
 #endif

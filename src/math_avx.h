@@ -67,7 +67,7 @@ public:
     
     //--------------------------------------------------------------------------
 
-    void copy_buffer(
+    void copy_buffer_float(
         float* src_buffer,
         float* dst_buffer,
         uint32_t size) const

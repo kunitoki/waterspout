@@ -29,7 +29,6 @@
 #include <waterspout.h>
 
 #include <cstdlib>
-#include <float.h>
 #include <stdexcept>
 
 #include <memory>
@@ -40,6 +39,12 @@
 
 #include <string>
 #include <map>
+
+
+#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+    #include <cpuid.h>
+#endif
+
 
 #if defined(WATERSPOUT_SIMD_MMX)
     #include <mmintrin.h>  // MMX
@@ -130,6 +135,25 @@ namespace waterspout {
     #define IACA_END   { IACA_SSC_MARK(222) IACA_UD_BYTES }
 
 #endif
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+/**
+ * Helper class to disallow copying classes
+ */
+
+class noncopyable
+{
+protected:
+    noncopyable() {}
+    ~noncopyable() {}
+private:
+    noncopyable(const noncopyable&);
+    const noncopyable& operator=(const noncopyable&);
+};
 
 
 //==============================================================================
@@ -664,10 +688,10 @@ typedef logger_detail_::info logger_info;
  */
 enum CpuFeatures
 {
-    FPU   = 1<< 0, // Floating-Point Unit on-chip
-    MMX   = 1<<23, // MultiMedia eXtension
-    SSE   = 1<<25, // Streaming SIMD Extension 1
-    SSE2  = 1<<26  // Streaming SIMD Extension 2
+    FPU   = 1 <<  0, // Floating-Point Unit on-chip
+    MMX   = 1 << 23, // MultiMedia eXtension
+    SSE   = 1 << 25, // Streaming SIMD Extension 1
+    SSE2  = 1 << 26  // Streaming SIMD Extension 2
 };
 
 /**
@@ -679,12 +703,12 @@ enum CpuFeatures
  */
 enum CpuExtendedFeatures
 {
-    SSE3  = 1<< 0, // Streaming SIMD Extension 3
-    SSE4A = 1<< 6, // SSE4A (only for AMD)
-    SSSE3 = 1<< 9, // SSSE3
-    SSE41 = 1<<19, // SSE41
-    SSE42 = 1<<20, // SSE42
-    AVX   = 1<<28  // AVX
+    SSE3  = 1 <<  0, // Streaming SIMD Extension 3
+    SSE4A = 1 <<  6, // SSE4A (only for AMD)
+    SSSE3 = 1 <<  9, // SSSE3
+    SSE41 = 1 << 19, // SSE41
+    SSE42 = 1 << 20, // SSE42
+    AVX   = 1 << 28  // AVX
 };
 
 /**
@@ -711,7 +735,7 @@ enum CpuEndianess
  * \param edx content of edx after the call to cpuid
  */
 
-void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& edx)
+void cpuid(uint32 op, uint32& eax, uint32& ebx, uint32& ecx, uint32& edx)
 {
 #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW)
     // GCC/MINGW provides a __get_cpuid function
@@ -721,10 +745,10 @@ void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& e
     // MSVC provides a __cpuid function
     int regs[4];
     __cpuid(regs, op);
-    eax = (uint32_t)regs[0];
-    ebx = (uint32_t)regs[1];
-    ecx = (uint32_t)regs[2];
-    edx = (uint32_t)regs[3];
+    eax = (uint32)regs[0];
+    ebx = (uint32)regs[1];
+    ecx = (uint32)regs[2];
+    edx = (uint32)regs[3];
 
 #endif
 }
@@ -737,9 +761,9 @@ void cpuid(uint32_t op, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& e
  * \return The content of the edx register containing available features
  */
 
-uint32_t cpu_features()
+uint32 cpu_features()
 {
-    uint32_t eax, ebx, ecx, edx;
+    uint32 eax, ebx, ecx, edx;
     cpuid(1, eax, ebx, ecx, edx);
     return edx;
 }
@@ -752,9 +776,9 @@ uint32_t cpu_features()
  * \return The content of the ecx register containing available extended features
  */
 
-uint32_t cpu_extended_features()
+uint32 cpu_extended_features()
 {
-    uint32_t eax, ebx, ecx, edx;
+    uint32 eax, ebx, ecx, edx;
     cpuid(1, eax, ebx, ecx, edx);
     return ecx;
 }
@@ -772,8 +796,8 @@ std::string cpu_processor_name()
 {
     char name[13];
     name[12] = 0;
-    uint32_t max_op;
-    cpuid(0, max_op, (uint32_t&)name[0], (uint32_t&)name[8], (uint32_t&)name[4]);
+    uint32 max_op;
+    cpuid(0, max_op, (uint32&)name[0], (uint32&)name[8], (uint32&)name[4]);
 
     return std::string(name);
 }
@@ -784,10 +808,10 @@ std::string cpu_processor_name()
  * Retrieve the processor endianess.
  */
 
-uint32_t cpu_endianness()
+uint32 cpu_endianness()
 {
-    uint32_t value;
-    uint8_t* buffer = (uint8_t*)&value;
+    uint32 value;
+    uint8* buffer = (uint8*)&value;
 
     buffer[0] = 0x00;
     buffer[1] = 0x01;
@@ -796,11 +820,11 @@ uint32_t cpu_endianness()
 
     switch (value)
     {
-    case uint32_t(0x00010203): return ENDIAN_BIG;
-    case uint32_t(0x03020100): return ENDIAN_LITTLE;
-    case uint32_t(0x02030001): return ENDIAN_BIG_WORD;
-    case uint32_t(0x01000302): return ENDIAN_LITTLE_WORD;
-    default:                   return ENDIAN_UNKNOWN;
+    case uint32(0x00010203): return ENDIAN_BIG;
+    case uint32(0x03020100): return ENDIAN_LITTLE;
+    case uint32(0x02030001): return ENDIAN_BIG_WORD;
+    case uint32(0x01000302): return ENDIAN_LITTLE_WORD;
+    default:                 return ENDIAN_UNKNOWN;
     }
 }
 
@@ -809,7 +833,7 @@ uint32_t cpu_endianness()
 
 //------------------------------------------------------------------------------
 
-void* memory::aligned_alloc(uint32_t size_bytes, uint32_t alignment_bytes)
+void* memory::aligned_alloc(uint32 size_bytes, uint32 alignment_bytes)
 {
 #if defined(WATERSPOUT_COMPILER_MSVC)
     return (void*)::_aligned_malloc(size_bytes, alignment_bytes);
@@ -933,8 +957,8 @@ math::math(int flags, bool fallback)
 
 #else
     {
-        static uint32_t features = cpu_features();
-        static uint32_t features_ext = cpu_extended_features();
+        static uint32 features = cpu_features();
+        static uint32 features_ext = cpu_extended_features();
 
         if (0)
         {

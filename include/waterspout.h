@@ -76,13 +76,13 @@
  * System definitions
  */
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
     // Windows (x64 and x86)
     #define WATERSPOUT_SYSTEM_WINDOWS 1
     #define NOMINMAX
     #include <windows.h>
 
-#elif __linux__
+#elif defined(LINUX) || defined(__linux__)
     #if defined(__ANDROID__)
         // Android
         #define WATERSPOUT_SYSTEM_ANDROID 1
@@ -167,9 +167,9 @@
  */
 
 #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+    #include <stddef.h>
     #include <stdint.h>
     #include <malloc.h>
-    #include <cpuid.h>
     #include <fenv.h>
 
     #define aligned(type_name, alignment) \
@@ -189,19 +189,10 @@
     //#define isnan(value) isnan(value) // already defined by gcc !
     //#define isinf(value) isinf(value) // already defined by gcc ! 
 
-    namespace waterspout {
-        forcedinline double time_now()
-        {
-            struct timeval t;
-            struct timezone tzp;
-            gettimeofday(&t, &tzp);
-            return t.tv_sec + t.tv_usec * 1e-6;
-        }
-    } // end namespace
-
 #elif defined(WATERSPOUT_COMPILER_MSVC)
+    #include <stddef.h>
+    //#include <stdint.h> // TODO - check _MSC_VER
     #include <intrin.h>
-    #include <stdint.h> // TODO - check _MSC_VER
     #include <float.h>
 
     #define aligned(type_name, alignment) \
@@ -221,18 +212,8 @@
           _EM_OVERFLOW | _EM_UNDERFLOW |_EM_DENORMAL | _EM_INEXACT),  \
           (unsigned)_MCW_EM);
 
-    #define isnan(value) ::_isnan(value)
+    #define isnan(value) (::_isnan(value))
     #define isinf(value) (!::_finite(value))
-
-    namespace waterspout {
-        forcedinline double time_now()
-        {
-            LARGE_INTEGER t, f;
-            QueryPerformanceCounter(&t);
-            QueryPerformanceFrequency(&f);
-            return double(t.QuadPart) / double(f.QuadPart);
-        }
-    } // end namespace
 
 #endif
 
@@ -244,25 +225,35 @@
  */
 
 // static assert
-template <bool b> struct staticassert_ {};
-template <> struct staticassert_<true> { static void valid_expression() {} };
+namespace waterspout {
+    template <bool b> struct staticassert_ {};
+    template <> struct staticassert_<true> { static void valid_expression(){} };
+}
 #define staticassert(x) \
-    staticassert_<x>::valid_expression();
+    waterspout::staticassert_<x>::valid_expression();
 
 // always false assertion
 #define assertfalse \
     do { assert(false); } while(0);
 
+// unused variable
+#define unused(x) \
+    ((void)x)
+
 // check if a pointer is aligned
 #define is_aligned(ptr, byte_count) \
     (((uintptr_t)(const void*)(ptr)) % (byte_count) == 0)
 
-// add this to your float to avoid denormalized numbers
-#define antidenormal 1.0e-25f
+// add this to your float / double to avoid denormalized numbers
+#define antidenormalf 1.0e-25f
+#define antidenormald 1.0e-30f
 
-// fast way to undenormalize a float
-#define undenormalize(floatvalue) \
-    floatvalue += antidenormal; floatvalue -= antidenormal;
+// fast way to undenormalize a float / double
+#define undenormalizef(floatvalue) \
+    floatvalue += antidenormalf; floatvalue -= antidenormalf;
+
+#define undenormalized(doublevalue) \
+    doublevalue += antidenormald; doublevalue -= antidenormald;
 
 
 //------------------------------------------------------------------------------
@@ -275,19 +266,30 @@ namespace waterspout {
 //------------------------------------------------------------------------------
 
 /**
- * Helper class to disallow copying classes
+ * Types valid on all architectures we build
  */
 
-class noncopyable
-{
-protected:
-    noncopyable() {}
-    ~noncopyable() {}
-private:
-    noncopyable(const noncopyable&);
-    const noncopyable& operator=(const noncopyable&);
-};
+typedef char int8;
+typedef unsigned char uint8;
 
+typedef short int16;
+typedef unsigned short uint16;
+
+typedef char int24[3];
+typedef unsigned char uint24[3];
+
+typedef int int32;
+typedef unsigned int uint32;
+
+#if defined(WATERSPOUT_COMPILER_MSVC)
+typedef __int64 int64;
+typedef unsigned __int64 uint64;
+
+#else
+typedef long long int64;
+typedef unsigned long long uint64;
+
+#endif
 
 //==============================================================================
 
@@ -352,6 +354,10 @@ public:
 
 private:
     T* object_ptr_;
+
+    // noncopyable
+    scoped_ptr(const scoped_ptr&);
+    const scoped_ptr& operator=(const scoped_ptr&);
 };
 
 
@@ -363,15 +369,19 @@ private:
  * @brief The memory class
  */
 
-class memory : private noncopyable
+class memory
 {
 public:
-
     // allocate aligned memory
-    static void* aligned_alloc(uint32_t size_bytes, uint32_t alignment_bytes);
+    static void* aligned_alloc(uint32 size_bytes, uint32 alignment_bytes);
 
     // free aligned memory
     static void aligned_free(void* ptr);
+
+private:
+    // noncopyable
+    memory(const memory&);
+    const memory& operator=(const memory&);
 };
 
 
@@ -383,8 +393,8 @@ public:
  * Base aligned buffer memory support
  */
 
-template<class T, uint32_t alignment_bytes=32>
-class aligned_buffer : private noncopyable
+template<class T, uint32 alignment_bytes=32>
+class aligned_buffer
 {
 public:
     aligned_buffer()
@@ -393,7 +403,7 @@ public:
     {
     }
 
-    aligned_buffer(uint32_t size)
+    aligned_buffer(uint32 size)
       : data_(NULL),
         size_(0)
     {
@@ -405,12 +415,12 @@ public:
         deallocate();
     }
 
-    void resize(uint32_t size)
+    void resize(uint32 size)
     {
         allocate(size);
     }
 
-    forcedinline T& operator[](uint32_t index)
+    forcedinline T& operator[](uint32 index)
     {
         assert(data_ != NULL);
         assert(index < size_);
@@ -418,7 +428,7 @@ public:
         return data_[index];
     }
     
-    forcedinline const T& operator[](uint32_t index) const
+    forcedinline const T& operator[](uint32 index) const
     {
         assert(data_ != NULL);
         assert(index < size_);
@@ -431,20 +441,23 @@ public:
         return data_;
     }
 
-    forcedinline uint32_t size()
+    forcedinline uint32 size()
     {
         return size_;
     }
 
 private:
-    void allocate(uint32_t size)
+    void allocate(uint32 size)
     {
-        deallocate();
+        if (size != size_)
+        {
+            deallocate();
 
-        const uint32_t size_bytes = size * sizeof(T);
-        
-        data_ = (T*)memory::aligned_alloc(size_bytes, alignment_bytes);
-        size_ = size;
+            const uint32 size_bytes = size * sizeof(T);
+
+            data_ = (T*)memory::aligned_alloc(size_bytes, alignment_bytes);
+            size_ = size;
+        }
     }
 
     void deallocate()
@@ -453,14 +466,26 @@ private:
         {
             memory::aligned_free(data_);
             data_ = NULL;
+            size_ = 0;
         }
     }
 
     T* data_;
-    uint32_t size_;
+    uint32 size_;
+
+    // noncopyable
+    aligned_buffer(const aligned_buffer&);
+    const aligned_buffer& operator=(const aligned_buffer&);
 };
 
-
+typedef aligned_buffer<int8, 32> int8_buffer;
+typedef aligned_buffer<uint8, 32> uint8_buffer;
+typedef aligned_buffer<int16, 32> int16_buffer;
+typedef aligned_buffer<uint16, 32> uint16_buffer;
+typedef aligned_buffer<int32, 32> int32_buffer;
+typedef aligned_buffer<uint32, 32> uint32_buffer;
+typedef aligned_buffer<int64, 32> int64_buffer;
+typedef aligned_buffer<uint64, 32> uin64_buffer;
 typedef aligned_buffer<float, 32> float_buffer;
 typedef aligned_buffer<double, 32> double_buffer;
 
@@ -473,57 +498,62 @@ typedef aligned_buffer<double, 32> double_buffer;
  * Base math class interface
  */
 
-class math_interface_ : private noncopyable
+#define math_interface_common_function(datatype) \
+    virtual void clear_buffer_ ##datatype ( \
+        datatype * src_buffer, \
+        uint32 size) const = 0; \
+    \
+    virtual void set_buffer_ ##datatype ( \
+        datatype * src_buffer, \
+        uint32 size, \
+        datatype value) const = 0; \
+    \
+    virtual void scale_buffer_ ##datatype ( \
+        datatype * src_buffer, \
+        uint32 size, \
+        float gain) const = 0; \
+    \
+    virtual void copy_buffer_ ##datatype ( \
+        datatype * src_buffer, \
+        datatype * dst_buffer, \
+        uint32 size) const = 0; \
+    \
+    virtual void add_buffers_ ##datatype ( \
+        datatype * src_buffer_a, \
+        datatype * src_buffer_b, \
+        datatype * dst_buffer, \
+        uint32 size) const = 0; \
+    \
+    virtual void subtract_buffers_ ##datatype ( \
+        datatype * src_buffer_a, \
+        datatype * src_buffer_b, \
+        datatype * dst_buffer, \
+        uint32 size) const = 0; \
+    \
+    virtual void multiply_buffers_ ##datatype ( \
+        datatype * src_buffer_a, \
+        datatype * src_buffer_b, \
+        datatype * dst_buffer, \
+        uint32 size) const = 0; \
+    \
+    virtual void divide_buffers_ ##datatype ( \
+        datatype * src_buffer_a, \
+        datatype * src_buffer_b, \
+        datatype * dst_buffer, \
+        uint32 size) const = 0;
+
+
+//------------------------------------------------------------------------------
+
+class math_interface_
 {
 public:
     // Define a name for the math implementation
     virtual const char* name() const = 0;
 
-    // Mono buffer manipulation
-    virtual void clear_buffer(
-        float* src_buffer,
-        uint32_t size) const = 0;
-
-    virtual void set_buffer(
-        float* src_buffer,
-        uint32_t size,
-        float value) const = 0;
-
-    virtual void scale_buffer(
-        float* src_buffer,
-        uint32_t size,
-        float gain) const = 0;
-
-    virtual void copy_buffer(
-        float* src_buffer,
-        float* dst_buffer,
-        uint32_t size) const = 0;
-
-    // Mono buffer arithmetic
-    virtual void add_buffers(
-        float* src_buffer_a,
-        float* src_buffer_b,
-        float* dst_buffer,
-        uint32_t size) const = 0;
-
-    virtual void subtract_buffers(
-        float* src_buffer_a,
-        float* src_buffer_b,
-        float* dst_buffer,
-        uint32_t size) const = 0;
-
-    virtual void multiply_buffers(
-        float* src_buffer_a,
-        float* src_buffer_b,
-        float* dst_buffer,
-        uint32_t size) const = 0;
-
-    virtual void divide_buffers(
-        float* src_buffer_a,
-        float* src_buffer_b,
-        float* dst_buffer,
-        uint32_t size) const = 0;
-
+    // Basic types functions
+    math_interface_common_function(int32)
+    math_interface_common_function(float)
 
     virtual ~math_interface_() { }
 
@@ -560,7 +590,7 @@ enum MathFlags
  * when no other SIMD extensions are found.
  */
 
-class math : private noncopyable
+class math
 {
 public:
     // Construct a math factory
@@ -578,9 +608,12 @@ public:
         return math_implementation_.get();
     }
 
-protected:
-
+private:
     scoped_ptr<math_interface_> math_implementation_;
+
+    // noncopyable
+    math(const math&);
+    const math& operator=(const math&);
 };
 
 

@@ -27,6 +27,12 @@ SOURCES += \
   $$SRCDIR/waterspout.cpp \
   $$TESTDIR/main.cpp
 
+OTHER_FILES += \
+  $$PWD/premake4.lua \
+  $$ROOTDIR/README.md \
+  $$ROOTDIR/AUTHORS \
+  $$ROOTDIR/LICENSE
+
 DEFINES += \
   __MMX__=1 \
   __SSE__=1 \

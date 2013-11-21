@@ -48,6 +48,7 @@ function setup_solution(projectname, projectkind, platformname)
   flags {
     --"EnableSSE",
     --"EnableSSE2",
+    "ExtraWarnings",
     "FatalWarnings",
     "NoImportLib"
   }

@@ -53,6 +53,204 @@ public:
         //assertfalse; // not implemented !
     }
 
+
+    //--------------------------------------------------------------------------
+
+    void clear_buffer_int32(
+        int32* src_buffer,
+        uint32 size) const
+    {
+        if (size < math_sse::MIN_SSE_SAMPLES)
+        {
+            math_sse::clear_buffer_int32(src_buffer, size);
+        }
+        else
+        {
+            assert(size >= math_sse::MIN_SSE_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *src_buffer++ = 0;
+            );
+
+            // Clear with simd
+            const __m128i vvalue = _mm_setzero_si128();
+            __m128i* vector_buffer = (__m128i*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *vector_buffer = vvalue;
+
+                ++vector_buffer;
+            }
+
+            // Handle any unaligned leftovers
+            src_buffer = (int32*)vector_buffer;
+
+            sse_unroll_tail(
+                *src_buffer++ = 0;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void set_buffer_int32(
+        int32* src_buffer,
+        uint32 size,
+        int32 value) const
+    {
+        if (size < math_sse::MIN_SSE_SAMPLES)
+        {
+            math_sse::set_buffer_int32(src_buffer, size, value);
+        }
+        else
+        {
+            assert(size >= math_sse::MIN_SSE_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *src_buffer++ = value;
+            );
+
+            // Clear with simd
+            const __m128i vvalue = _mm_set1_epi32(value);
+            __m128i* vector_buffer = (__m128i*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *vector_buffer = vvalue;
+
+                ++vector_buffer;
+            }
+
+            // Handle any unaligned leftovers
+            src_buffer = (int32*)vector_buffer;
+
+            sse_unroll_tail(
+                *src_buffer++ = value;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void add_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+
+        if (size < math_sse::MIN_SSE_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        {
+            math_sse::add_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
+        }
+        else
+        {
+            assert(size >= math_sse::MIN_SSE_SIZE);
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
+            );
+
+            // Scale with simd
+            __m128i* vector_buffer_a = (__m128i*)src_buffer_a;
+            __m128i* vector_buffer_b = (__m128i*)src_buffer_b;
+            __m128i* vector_dst_buffer = (__m128i*)dst_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *vector_dst_buffer =
+                  _mm_add_epi32(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
+            }
+
+            // Handle any unaligned leftovers
+            src_buffer_a = (int32*)vector_buffer_a;
+            src_buffer_b = (int32*)vector_buffer_b;
+            dst_buffer = (int32*)vector_dst_buffer;
+
+            sse_unroll_tail(
+                *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void subtract_buffers_int32(
+        int32* src_buffer_a,
+        int32* src_buffer_b,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+
+        if (size < math_sse::MIN_SSE_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        {
+            math_sse::subtract_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
+        }
+        else
+        {
+            assert(size >= math_sse::MIN_SSE_SIZE);
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
+            );
+
+            // Scale with simd
+            __m128i* vector_buffer_a = (__m128i*)src_buffer_a;
+            __m128i* vector_buffer_b = (__m128i*)src_buffer_b;
+            __m128i* vector_dst_buffer = (__m128i*)dst_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *vector_dst_buffer =
+                  _mm_sub_epi32(*vector_buffer_a, *vector_buffer_b);
+
+                ++vector_buffer_a;
+                ++vector_buffer_b;
+                ++vector_dst_buffer;
+            }
+
+            // Handle any unaligned leftovers
+            src_buffer_a = (int32*)vector_buffer_a;
+            src_buffer_b = (int32*)vector_buffer_b;
+            dst_buffer = (int32*)vector_dst_buffer;
+
+            sse_unroll_tail(
+                *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
+            );
+        }
+    }
+
+
 };
 
 
