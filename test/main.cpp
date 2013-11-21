@@ -242,12 +242,11 @@ void check_buffers_are_equal(T* a, T* b, uint32 size)
     run_all_tests_by_flag(FORCE_MMX); \
     run_all_tests_by_flag(FORCE_SSE); \
     run_all_tests_by_flag(FORCE_SSE2); \
-
-    //run_all_tests_by_flag(FORCE_SSE3)
-    //run_all_tests_by_flag(FORCE_SSSE3)
-    //run_all_tests_by_flag(FORCE_SSE41)
-    //run_all_tests_by_flag(FORCE_SSE42)
-    //run_all_tests_by_flag(FORCE_AVX)
+    run_all_tests_by_flag(FORCE_SSE3); \
+    run_all_tests_by_flag(FORCE_SSSE3); \
+    run_all_tests_by_flag(FORCE_SSE41); \
+    run_all_tests_by_flag(FORCE_SSE42); \
+    run_all_tests_by_flag(FORCE_AVX);
 
 } // end namespace
 
