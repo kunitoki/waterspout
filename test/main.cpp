@@ -162,109 +162,92 @@ void check_buffers_are_equal(T* a, T* b, uint32 size)
 
 //------------------------------------------------------------------------------
 
-void run_unit_tests(int flags)
-{
-    const uint32 s = 4096;
+#define run_typed_test_by_flag(datatype) \
+    { \
+    datatype## _buffer src_buffer_a1(s); \
+    datatype## _buffer src_buffer_a2(s); \
+    datatype## _buffer src_buffer_b1(s); \
+    datatype## _buffer src_buffer_b2(s); \
+    datatype## _buffer dst_buffer_1(s); \
+    datatype## _buffer dst_buffer_2(s); \
+    \
+    std::clog << " - clear_buffer_" << #datatype << std::endl; \
+    simd->clear_buffer_ ##datatype (src_buffer_a1.data(), s); \
+    fpu->clear_buffer_ ##datatype (src_buffer_a2.data(), s); \
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s); \
+    \
+    std::clog << " - set_buffer_" << #datatype << std::endl; \
+    simd->set_buffer_ ##datatype (src_buffer_a1.data(), s, (datatype)1); \
+    fpu->set_buffer_ ##datatype (src_buffer_a2.data(), s, (datatype)1); \
+    simd->set_buffer_ ##datatype (src_buffer_b1.data(), s, (datatype)500); \
+    fpu->set_buffer_ ##datatype (src_buffer_b2.data(), s, (datatype)500); \
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s); \
+    check_buffers_are_equal(src_buffer_b1.data(), src_buffer_b2.data(), s); \
+    \
+    std::clog << " - scale_buffer_" << #datatype << std::endl; \
+    simd->scale_buffer_ ##datatype (src_buffer_a1.data(), s, 2.0f); \
+    fpu->scale_buffer_ ##datatype (src_buffer_a2.data(), s, 2.0f); \
+    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s); \
+    \
+    std::clog << " - copy_buffer_" << #datatype << std::endl; \
+    simd->copy_buffer_ ##datatype (src_buffer_a1.data(), dst_buffer_1.data(), s); \
+    fpu->copy_buffer_ ##datatype (src_buffer_a2.data(), dst_buffer_2.data(), s); \
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s); \
+    \
+    std::clog << " - add_buffers_" << #datatype << std::endl; \
+    simd->add_buffers_ ##datatype (src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s); \
+    fpu->add_buffers_ ##datatype (src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s); \
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s); \
+    \
+    std::clog << " - subtract_buffers_" << #datatype << std::endl; \
+    simd->subtract_buffers_ ##datatype (src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s); \
+    fpu->subtract_buffers_ ##datatype (src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s); \
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s); \
+    \
+    std::clog << " - multiply_buffers_" << #datatype << std::endl; \
+    simd->multiply_buffers_ ##datatype (src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s); \
+    fpu->multiply_buffers_ ##datatype (src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s); \
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s); \
+    \
+    std::clog << " - divide_buffers_" << #datatype << std::endl; \
+    simd->set_buffer_ ##datatype (src_buffer_b1.data(), s, (datatype)2); \
+    fpu->set_buffer_ ##datatype (src_buffer_b2.data(), s, (datatype)2); \
+    simd->divide_buffers_ ##datatype (src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s); \
+    fpu->divide_buffers_ ##datatype (src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s); \
+    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s); \
+    \
+    std::clog << std::endl; \
+    }
 
-    math fpu(FORCE_FPU);
-    math simd(flags);
 
+#define run_all_tests_by_flag(flags) \
+    { \
+    const uint32 s = 8192; \
+    math fpu(FORCE_FPU); \
+    math simd(flags); \
+    std::clog << simd.name() << ": " << std::endl; \
+    run_typed_test_by_flag(int8); \
+    run_typed_test_by_flag(uint8); \
+    run_typed_test_by_flag(int16); \
+    run_typed_test_by_flag(uint16); \
+    run_typed_test_by_flag(int32); \
+    run_typed_test_by_flag(uint32); \
+    run_typed_test_by_flag(int64); \
+    run_typed_test_by_flag(uint64); \
+    run_typed_test_by_flag(float); \
+    run_typed_test_by_flag(double); \
+    }
 
-    // integer math
+#define run_all_tests \
+    run_all_tests_by_flag(FORCE_MMX); \
+    run_all_tests_by_flag(FORCE_SSE); \
+    run_all_tests_by_flag(FORCE_SSE2); \
 
-    int32_buffer src_buffer_int32_a1(s);
-    int32_buffer src_buffer_int32_a2(s);
-    int32_buffer src_buffer_int32_b1(s);
-    int32_buffer src_buffer_int32_b2(s);
-    int32_buffer dst_buffer_int32_1(s);
-    int32_buffer dst_buffer_int32_2(s);
-
-    std::clog << simd.name() << ": clear_buffer_in32" << std::endl;
-    simd->clear_buffer_int32(src_buffer_int32_a1.data(), s);
-    fpu->clear_buffer_int32(src_buffer_int32_a2.data(), s);
-    check_buffers_are_equal(src_buffer_int32_a1.data(), src_buffer_int32_a2.data(), s);
-
-    std::clog << simd.name() << ": set_buffer_int32" << std::endl;
-    simd->set_buffer_int32(src_buffer_int32_a1.data(), s, 100);
-    fpu->set_buffer_int32(src_buffer_int32_a2.data(), s, 100);
-    simd->set_buffer_int32(src_buffer_int32_b1.data(), s, 1000);
-    fpu->set_buffer_int32(src_buffer_int32_b2.data(), s, 1000);
-    check_buffers_are_equal(src_buffer_int32_a1.data(), src_buffer_int32_a2.data(), s);
-    check_buffers_are_equal(src_buffer_int32_b1.data(), src_buffer_int32_b2.data(), s);
-
-    std::clog << simd.name() << ": copy_buffer_int32" << std::endl;
-    simd->copy_buffer_int32(src_buffer_int32_a1.data(), dst_buffer_int32_1.data(), s);
-    fpu->copy_buffer_int32(src_buffer_int32_a2.data(), dst_buffer_int32_2.data(), s);
-    check_buffers_are_equal(dst_buffer_int32_1.data(), dst_buffer_int32_2.data(), s);
-
-    std::clog << simd.name() << ": add_buffers_int32" << std::endl;
-    simd->add_buffers_int32(src_buffer_int32_a1.data(), src_buffer_int32_b1.data(), dst_buffer_int32_1.data(), s);
-    fpu->add_buffers_int32(src_buffer_int32_a2.data(), src_buffer_int32_b2.data(), dst_buffer_int32_2.data(), s);
-    check_buffers_are_equal(dst_buffer_int32_1.data(), dst_buffer_int32_2.data(), s);
-
-    std::clog << simd.name() << ": subtract_buffers_int32" << std::endl;
-    simd->subtract_buffers_int32(src_buffer_int32_a1.data(), src_buffer_int32_b1.data(), dst_buffer_int32_1.data(), s);
-    fpu->subtract_buffers_int32(src_buffer_int32_a2.data(), src_buffer_int32_b2.data(), dst_buffer_int32_2.data(), s);
-    check_buffers_are_equal(dst_buffer_int32_1.data(), dst_buffer_int32_2.data(), s);
-
-
-    // floating point math
-
-    float_buffer src_buffer_a1(s);
-    float_buffer src_buffer_a2(s);
-    float_buffer src_buffer_b1(s);
-    float_buffer src_buffer_b2(s);
-    float_buffer dst_buffer_1(s);
-    float_buffer dst_buffer_2(s);
-
-    std::clog << simd.name() << ": clear_buffer_float" << std::endl;
-    simd->clear_buffer_float(src_buffer_a1.data(), s);
-    fpu->clear_buffer_float(src_buffer_a2.data(), s);
-    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s);
-
-    std::clog << simd.name() << ": set_buffer_float" << std::endl;
-    simd->set_buffer_float(src_buffer_a1.data(), s, 0.5f);
-    fpu->set_buffer_float(src_buffer_a2.data(), s, 0.5f);
-    simd->set_buffer_float(src_buffer_b1.data(), s, 500.0f);
-    fpu->set_buffer_float(src_buffer_b2.data(), s, 500.0f);
-    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s);
-    check_buffers_are_equal(src_buffer_b1.data(), src_buffer_b2.data(), s);
-
-    std::clog << simd.name() << ": scale_buffer_float" << std::endl;
-    simd->scale_buffer_float(src_buffer_a1.data(), s, 2.0f);
-    fpu->scale_buffer_float(src_buffer_a2.data(), s, 2.0f);
-    check_buffers_are_equal(src_buffer_a1.data(), src_buffer_a2.data(), s);
-
-    std::clog << simd.name() << ": copy_buffer_float" << std::endl;
-    simd->copy_buffer_float(src_buffer_a1.data(), dst_buffer_1.data(), s);
-    fpu->copy_buffer_float(src_buffer_a2.data(), dst_buffer_2.data(), s);
-    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s);
-
-    std::clog << simd.name() << ": add_buffers_float" << std::endl;
-    simd->add_buffers_float(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s);
-    fpu->add_buffers_float(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s);
-    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s);
-
-    std::clog << simd.name() << ": subtract_buffers_float" << std::endl;
-    simd->subtract_buffers_float(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s);
-    fpu->subtract_buffers_float(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s);
-    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s);
-
-    std::clog << simd.name() << ": multiply_buffers_float" << std::endl;
-    simd->multiply_buffers_float(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s);
-    fpu->multiply_buffers_float(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s);
-    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s);
-
-    std::clog << simd.name() << ": divide_buffers_float" << std::endl;
-    simd->set_buffer_float(src_buffer_b1.data(), s, 2.0f);
-    fpu->set_buffer_float(src_buffer_b2.data(), s, 2.0f);
-    simd->divide_buffers_float(src_buffer_a1.data(), src_buffer_b1.data(), dst_buffer_1.data(), s);
-    fpu->divide_buffers_float(src_buffer_a2.data(), src_buffer_b2.data(), dst_buffer_2.data(), s);
-    check_buffers_are_equal(dst_buffer_1.data(), dst_buffer_2.data(), s);
-
-    std::clog << std::endl;
-}
-
+    //run_all_tests_by_flag(FORCE_SSE3)
+    //run_all_tests_by_flag(FORCE_SSSE3)
+    //run_all_tests_by_flag(FORCE_SSE41)
+    //run_all_tests_by_flag(FORCE_SSE42)
+    //run_all_tests_by_flag(FORCE_AVX)
 
 } // end namespace
 
@@ -273,14 +256,7 @@ void run_unit_tests(int flags)
 
 int main(int argc, char* argv[])
 {
-    run_unit_tests(FORCE_MMX);
-    run_unit_tests(FORCE_SSE);
-    run_unit_tests(FORCE_SSE2);
-    //run_unit_tests(FORCE_SSE3);
-    //run_unit_tests(FORCE_SSSE3);
-    //run_unit_tests(FORCE_SSE41);
-    //run_unit_tests(FORCE_SSE42);
-    //run_unit_tests(FORCE_AVX);
+    run_all_tests
 
     return 0;
 }

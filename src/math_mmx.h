@@ -69,8 +69,9 @@ public:
 
     enum SSEMathDefines
     {
-        MIN_MMX_SIZE    = 2,
-        MIN_MMX_SAMPLES = 32
+        MMX_MIN_SIZE    = 2,
+        MMX_MIN_SAMPLES = 32,
+        MMX_ALIGN       = 0x0F
     };
 
 
@@ -88,15 +89,15 @@ public:
         int32* src_buffer,
         uint32 size) const
     {
-        if (size < MIN_MMX_SAMPLES)
+        if (size < MMX_MIN_SAMPLES)
         {
             math_fpu::clear_buffer_int32(src_buffer, size);
         }
         else
         {
-            assert(size >= MIN_MMX_SIZE);
+            assert(size >= MMX_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & MMX_ALIGN);
 
             // Copy unaligned head
             mmx_unroll_head(
@@ -136,15 +137,15 @@ public:
         uint32 size,
         int32 value) const
     {
-        if (size < MIN_MMX_SAMPLES)
+        if (size < MMX_MIN_SAMPLES)
         {
             math_fpu::set_buffer_int32(src_buffer, size, value);
         }
         else
         {
-            assert(size >= MIN_MMX_SIZE);
+            assert(size >= MMX_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & MMX_ALIGN);
 
             // Copy unaligned head
             mmx_unroll_head(
@@ -184,16 +185,16 @@ public:
         int32* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & MMX_ALIGN);
 
-        if (size < MIN_MMX_SAMPLES ||
-              ((ptrdiff_t)dst_buffer & 0x0F) != align_bytes)
+        if (size < MMX_MIN_SAMPLES ||
+              ((ptrdiff_t)dst_buffer & MMX_ALIGN) != align_bytes)
         {
             math_fpu::copy_buffer_int32(src_buffer, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_MMX_SIZE);
+            assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
             mmx_unroll_head(
@@ -236,17 +237,17 @@ public:
         int32* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & MMX_ALIGN);
 
-        if (size < MIN_MMX_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < MMX_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & MMX_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & MMX_ALIGN)))
         {
             math_fpu::add_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_MMX_SIZE);
+            assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
             mmx_unroll_head(
@@ -293,17 +294,17 @@ public:
         int32* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & MMX_ALIGN);
 
-        if (size < MIN_MMX_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < MMX_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & MMX_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & MMX_ALIGN)))
         {
             math_fpu::subtract_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_MMX_SIZE);
+            assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
             mmx_unroll_head(

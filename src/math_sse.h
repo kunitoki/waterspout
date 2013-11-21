@@ -118,8 +118,9 @@ public:
 
     enum SSEMathDefines
     {
-        MIN_SSE_SIZE    = 4,
-        MIN_SSE_SAMPLES = 32
+        SSE_MIN_SIZE    = 4,
+        SSE_MIN_SAMPLES = 32,
+        SSE_ALIGN       = 0x0F
     };
 
 
@@ -137,15 +138,15 @@ public:
         float* src_buffer,
         uint32 size) const
     {
-        if (size < MIN_SSE_SAMPLES)
+        if (size < SSE_MIN_SAMPLES)
         {
             math_mmx::clear_buffer_float(src_buffer, size);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -181,15 +182,15 @@ public:
         uint32 size,
         float value) const
     {
-        if (size < MIN_SSE_SAMPLES)
+        if (size < SSE_MIN_SAMPLES)
         {
             math_mmx::set_buffer_float(src_buffer, size, value);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -226,15 +227,15 @@ public:
         uint32 size,
         float gain) const
     {
-        if (size < MIN_SSE_SAMPLES)
+        if (size < SSE_MIN_SAMPLES)
         {
             math_mmx::scale_buffer_float(src_buffer, size, gain);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
             const disable_sse_denormals disable_denormals;
 
@@ -276,16 +277,16 @@ public:
         float* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
-        if (size < MIN_SSE_SAMPLES ||
-              ((ptrdiff_t)dst_buffer & 0x0F) != align_bytes)
+        if (size < SSE_MIN_SAMPLES ||
+              ((ptrdiff_t)dst_buffer & SSE_ALIGN) != align_bytes)
         {
             math_mmx::copy_buffer_float(src_buffer, dst_buffer, size);
         } 
         else 
         { 
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -325,17 +326,17 @@ public:
         float* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & SSE_ALIGN);
 
-        if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & SSE_ALIGN)))
         {
             math_mmx::add_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -379,17 +380,17 @@ public:
         float* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & SSE_ALIGN);
 
-        if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & SSE_ALIGN)))
         {
             math_mmx::subtract_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -433,17 +434,17 @@ public:
         float* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & SSE_ALIGN);
 
-        if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & SSE_ALIGN)))
         {
             math_mmx::multiply_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
             const disable_sse_denormals disable_denormals;
 
@@ -493,17 +494,17 @@ public:
         float* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & SSE_ALIGN);
 
-        if (size < MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & SSE_ALIGN)))
         {
             math_mmx::divide_buffers_float(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= MIN_SSE_SIZE);
+            assert(size >= SSE_MIN_SIZE);
 
             const disable_sse_denormals disable_denormals;
 

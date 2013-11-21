@@ -60,15 +60,16 @@ public:
         int32* src_buffer,
         uint32 size) const
     {
-        if (size < math_sse::MIN_SSE_SAMPLES)
+        if (size < math_sse::SSE_MIN_SAMPLES)
         {
             math_sse::clear_buffer_int32(src_buffer, size);
         }
         else
         {
-            assert(size >= math_sse::MIN_SSE_SIZE);
+            assert(size >= math_sse::SSE_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes =
+                ((ptrdiff_t)src_buffer & math_sse::SSE_ALIGN);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -105,15 +106,16 @@ public:
         uint32 size,
         int32 value) const
     {
-        if (size < math_sse::MIN_SSE_SAMPLES)
+        if (size < math_sse::SSE_MIN_SAMPLES)
         {
             math_sse::set_buffer_int32(src_buffer, size, value);
         }
         else
         {
-            assert(size >= math_sse::MIN_SSE_SIZE);
+            assert(size >= math_sse::SSE_MIN_SIZE);
 
-            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & 0x0F);
+            const ptrdiff_t align_bytes =
+                ((ptrdiff_t)src_buffer & math_sse::SSE_ALIGN);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -151,17 +153,18 @@ public:
         int32* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes =
+            ((ptrdiff_t)dst_buffer & math_sse::SSE_ALIGN);
 
-        if (size < math_sse::MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < math_sse::SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & math_sse::SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & math_sse::SSE_ALIGN)))
         {
             math_sse::add_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= math_sse::MIN_SSE_SIZE);
+            assert(size >= math_sse::SSE_MIN_SIZE);
 
             // Copy unaligned head
             sse_unroll_head(
@@ -205,17 +208,18 @@ public:
         int32* dst_buffer,
         uint32 size) const
     {
-        const ptrdiff_t align_bytes = ((ptrdiff_t)dst_buffer & 0x0F);
+        const ptrdiff_t align_bytes =
+            ((ptrdiff_t)dst_buffer & math_sse::SSE_ALIGN);
 
-        if (size < math_sse::MIN_SSE_SAMPLES ||
-            (align_bytes != ((ptrdiff_t)src_buffer_a & 0x0F) ||
-             align_bytes != ((ptrdiff_t)src_buffer_b & 0x0F)))
+        if (size < math_sse::SSE_MIN_SAMPLES ||
+            (align_bytes != ((ptrdiff_t)src_buffer_a & math_sse::SSE_ALIGN) ||
+             align_bytes != ((ptrdiff_t)src_buffer_b & math_sse::SSE_ALIGN)))
         {
             math_sse::subtract_buffers_int32(src_buffer_a, src_buffer_b, dst_buffer, size);
         }
         else
         {
-            assert(size >= math_sse::MIN_SSE_SIZE);
+            assert(size >= math_sse::SSE_MIN_SIZE);
 
             // Copy unaligned head
             sse_unroll_head(

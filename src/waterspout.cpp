@@ -1116,7 +1116,7 @@ math::math(int flags, bool fallback)
     if (math_implementation_ != NULL)
     {
         WATERSPOUT_LOG_DEBUG(math_factory)
-            << "Enabled " << math_implementation_->name() << instructions;
+            << "Enabled " << math_implementation_->name() << " instructions";
     }
 #endif
 }

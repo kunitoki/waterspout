@@ -485,7 +485,7 @@ typedef aligned_buffer<uint16, 32> uint16_buffer;
 typedef aligned_buffer<int32, 32> int32_buffer;
 typedef aligned_buffer<uint32, 32> uint32_buffer;
 typedef aligned_buffer<int64, 32> int64_buffer;
-typedef aligned_buffer<uint64, 32> uin64_buffer;
+typedef aligned_buffer<uint64, 32> uint64_buffer;
 typedef aligned_buffer<float, 32> float_buffer;
 typedef aligned_buffer<double, 32> double_buffer;
 
@@ -498,7 +498,7 @@ typedef aligned_buffer<double, 32> double_buffer;
  * Base math class interface
  */
 
-#define math_interface_common_function(datatype) \
+#define math_interface_common_functions(datatype) \
     virtual void clear_buffer_ ##datatype ( \
         datatype * src_buffer, \
         uint32 size) const = 0; \
@@ -552,8 +552,16 @@ public:
     virtual const char* name() const = 0;
 
     // Basic types functions
-    math_interface_common_function(int32)
-    math_interface_common_function(float)
+    math_interface_common_functions(int8)
+    math_interface_common_functions(uint8)
+    math_interface_common_functions(int16)
+    math_interface_common_functions(uint16)
+    math_interface_common_functions(int32)
+    math_interface_common_functions(uint32)
+    math_interface_common_functions(int64)
+    math_interface_common_functions(uint64)
+    math_interface_common_functions(float)
+    math_interface_common_functions(double)
 
     virtual ~math_interface_() { }
 
