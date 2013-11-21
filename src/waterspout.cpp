@@ -499,7 +499,7 @@ namespace logger_detail_ {
     public:
         typedef std::basic_ostringstream<Ch, Tr, A> stream_buffer;
 
-        void operator()(const logger::severity_type& severity, const stream_buffer &s)
+        void operator()(const logger::severity_type& /*severity*/, const stream_buffer &s)
         {
             std::clog << logger::str() << " " << s.str() << std::endl;
         }
@@ -839,7 +839,7 @@ void* memory::aligned_alloc(uint32 size_bytes, uint32 alignment_bytes)
     return (void*)::_aligned_malloc(size_bytes, alignment_bytes);
 #elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
     void* ptr;
-    if (::posix_memalign(&ptr, alignment_bytes, size_bytes) == 0);
+    if (::posix_memalign(&ptr, alignment_bytes, size_bytes) == 0) { /* do nothing */ }
     return ptr;
 #else
     return (void*)::malloc(size_bytes);

@@ -103,7 +103,7 @@ public:
     {
         if (size < AVX_MIN_SAMPLES)
         {
-            math_sse42::clear_buffer_float(src_buffer, dst_buffer, size);
+            math_sse42::clear_buffer_float(src_buffer, size);
         } 
         else 
         { 
