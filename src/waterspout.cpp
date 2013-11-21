@@ -796,8 +796,10 @@ std::string cpu_processor_name()
 {
     char name[13];
     name[12] = 0;
+
     uint32 max_op;
-    cpuid(0, max_op, (uint32&)name[0], (uint32&)name[8], (uint32&)name[4]);
+    cpuid(0, max_op, reinterpret_cast<uint32&>(name[0]),
+        reinterpret_cast<uint32&>(name[8]), reinterpret_cast<uint32&>(name[4]));
 
     return std::string(name);
 }
