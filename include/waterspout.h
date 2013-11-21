@@ -262,7 +262,7 @@ template <> struct staticassert_<true> { static void valid_expression() {} };
 
 // fast way to undenormalize a float
 #define undenormalize(floatvalue) \
-    floatvalue += 1.0e-18f; floatvalue -= 1.0e-18f;
+    floatvalue += antidenormal; floatvalue -= antidenormal;
 
 
 //------------------------------------------------------------------------------

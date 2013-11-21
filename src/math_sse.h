@@ -242,7 +242,9 @@ public:
             // Copy unaligned head
             sse_unroll_head(
                 --size;
-                *src_buffer++ *= gain;
+                *src_buffer = *src_buffer * gain;
+                undenormalize(*src_buffer);
+                ++src_buffer;
             );
 
             // Scale with simd
@@ -260,7 +262,9 @@ public:
             src_buffer = (float*)vector_buffer;
 
             sse_unroll_tail(
-                *src_buffer++ *= gain;
+                *src_buffer = *src_buffer * gain;
+                undenormalize(*src_buffer);
+                ++src_buffer;
             );
         }
     }
@@ -447,7 +451,9 @@ public:
             // Copy unaligned head
             sse_unroll_head(
                 --size;
-                *dst_buffer++ = *src_buffer_a++ * *src_buffer_b++;
+                *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
+                undenormalize(*dst_buffer);
+                ++dst_buffer;
             );
 
             // Scale with simd
@@ -472,7 +478,9 @@ public:
             dst_buffer = (float*)vector_dst_buffer;
 
             sse_unroll_tail(
-                *dst_buffer++ = *src_buffer_a++ * *src_buffer_b++;
+                *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
+                undenormalize(*dst_buffer);
+                ++dst_buffer;
             );
         }
     }
@@ -503,7 +511,9 @@ public:
             // Copy unaligned head
             sse_unroll_head(
                 --size;
-                *dst_buffer++ = *src_buffer_a++ / *src_buffer_b++;
+                *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
+                undenormalize(*dst_buffer);
+                ++dst_buffer;
             );
 
             // Scale with simd
@@ -528,7 +538,9 @@ public:
             dst_buffer = (float*)vector_dst_buffer;
 
             sse_unroll_tail(
-                *dst_buffer++ = *src_buffer_a++ / *src_buffer_b++;
+                *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
+                undenormalize(*dst_buffer);
+                ++dst_buffer;
             );
         }
     }
