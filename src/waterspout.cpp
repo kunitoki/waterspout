@@ -29,6 +29,7 @@
 #include <waterspout.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 
 #include <memory>
@@ -794,12 +795,14 @@ uint32 cpu_extended_features()
 
 std::string cpu_processor_name()
 {
-    char name[13];
-    name[12] = 0;
+    uint32 eax, ebx, ecx, edx;
+    cpuid(0, eax, ebx, ecx, edx);
 
-    uint32 max_op;
-    cpuid(0, max_op, reinterpret_cast<uint32&>(name[0]),
-        reinterpret_cast<uint32&>(name[8]), reinterpret_cast<uint32&>(name[4]));
+    char name[13];
+    ::memcpy((void*)&name[0], (void*)&ebx, 4 * sizeof(char));
+    ::memcpy((void*)&name[4], (void*)&edx, 4 * sizeof(char));
+    ::memcpy((void*)&name[8], (void*)&ecx, 4 * sizeof(char));
+    name[12] = 0;
 
     return std::string(name);
 }
