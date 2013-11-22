@@ -183,7 +183,6 @@ public:
                 ++source_vector;
             }
 
-
             // Handle any unaligned leftovers
             src_buffer = (int32*)source_vector;
             dst_buffer = (int32*)dest_vector;
