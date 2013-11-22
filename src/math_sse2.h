@@ -147,6 +147,56 @@ public:
 
     //--------------------------------------------------------------------------
 
+    void copy_buffer_int32(
+        int32* src_buffer,
+        int32* dst_buffer,
+        uint32 size) const
+    {
+        const ptrdiff_t align_bytes =
+            ((ptrdiff_t)src_buffer & math_sse::SSE_ALIGN);
+
+        if (size < math_sse::SSE_MIN_SAMPLES ||
+            ((ptrdiff_t)dst_buffer & math_sse::SSE_ALIGN) != align_bytes)
+        {
+            math_sse::copy_buffer_int32(src_buffer, dst_buffer, size);
+        }
+        else
+        {
+            assert(size >= math_sse::SSE_MIN_SIZE);
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *dst_buffer++ = *src_buffer++;
+            );
+
+            // Scale with simd
+            __m128i* source_vector = (__m128i*)src_buffer;
+            __m128i* dest_vector = (__m128i*)dst_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *dest_vector = *source_vector;
+
+                ++dest_vector;
+                ++source_vector;
+            }
+
+
+            // Handle any unaligned leftovers
+            src_buffer = (int32*)source_vector;
+            dst_buffer = (int32*)dest_vector;
+
+            sse_unroll_tail(
+                *dst_buffer++ = *src_buffer++;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
     void add_buffers_int32(
         int32* src_buffer_a,
         int32* src_buffer_b,
