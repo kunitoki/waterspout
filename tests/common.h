@@ -225,13 +225,6 @@ private:
 
 //------------------------------------------------------------------------------
 
-#define add_test_macro(clazz, func, simd_impl, datatype) \
-    add_test(#clazz "::" #func "_" #simd_impl "_" #datatype, \
-        static_cast<test_runner::test_function>(&clazz::func##_##simd_impl##_##datatype));
-
-
-//------------------------------------------------------------------------------
-
 class test_runner
 {
 public:
@@ -239,13 +232,19 @@ public:
     typedef void (test_runner::*test_function) (void);
 
     test_runner()
+        : verbose_(false)
     {
     }
 
     virtual ~test_runner()
     {
     }
-    
+
+    void set_verbose(bool verbose)
+    {
+        verbose_ = verbose;
+    }
+
     void add_test(const std::string& name, test_function fn)
     {
         names_.push_back(name);
@@ -316,14 +315,19 @@ public:
 
         for (size_t i = 0; i < status_.size(); i++)
         {
-            std::clog << "  - Test " << i << " of " << num_total_tests() << " ("
-                      << names_[i] << "): ";
-
-            if (status_[i]->is_valid())
+            const bool is_valid = status_[i]->is_valid();
+            if (verbose_ || ! is_valid)
             {
-                std::clog << "OK" << std::endl;
+                std::clog << "  - Test " << i << " of " << num_total_tests() << " ("
+                          << names_[i] << "): ";
+
+                if (is_valid)
+                {
+                    std::clog << "OK" << std::endl;
+                }
             }
-            else
+
+            if (! is_valid)
             {
                 std::clog << "ERROR" << std::endl;
                 std::clog << "  " << status_[i]->status() << std::endl;
@@ -334,6 +338,7 @@ public:
     }
 
 protected:
+    bool verbose_;
 
     std::vector< test_function > tests_;
     std::vector< std::string > names_;
@@ -345,65 +350,18 @@ protected:
 
 //------------------------------------------------------------------------------
 
-#define declare_test_runner(TEST_RUNNER, TESTS_DECLARE, TESTS_INIT) \
-    class TEST_RUNNER : public test_runner \
-    { \
-    public: \
-        TESTS_DECLARE \
-        \
-        TEST_RUNNER () \
-        { \
-            TESTS_INIT; \
-        } \
-    };
-
-
-//------------------------------------------------------------------------------
-
-#define declare_test_1(CODE) \
-    class __test_1 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_2(CODE) \
-    class __test_2 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_3(CODE) \
-    class __test_3 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_4(CODE) \
-    class __test_4 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_5(CODE) \
-    class __test_5 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_6(CODE) \
-    class __test_6 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_7(CODE) \
-    class __test_7 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_8(CODE) \
-    class __test_8 : public test_base { public: virtual void run() throw() { CODE; } };
-
-#define declare_test_9(CODE) \
-    class __test_9 : public test_base { public: virtual void run() throw() { CODE; } };
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
 template<typename T>
-void check_buffer_is_value_(const char* file, int /*line*/, T* buffer, uint32 size, T value)
+void check_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
 {
     for (uint32 i = 0; i < size; ++i)
     {
         if (buffer[i] != value)
         {
             std::ostringstream error;
-            error << "Errors at index "
-                  << i << " (" << buffer[i] << "!=" << value << ")" << std::endl;
+            error << file << "(" << line << "): " << "Buffer is not a specific value..."
+                  << "at index " << i << " (" << buffer[i] << "!=" << value << ")" << std::endl;
 
-            throw test_exception(std::string(file) + " " + "Buffer is not a specific value: " + error.str());
+            throw test_exception(error.str());
         }
     }
 }
@@ -415,17 +373,49 @@ void check_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
 }
 
 template<typename T>
-void check_buffers_are_equal_(const char* file, int /*line*/, T* a, T* b, uint32 size)
+void check_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
 {
     for (uint32 i = 0; i < size; ++i)
     {
         if (a[i] != b[i])
         {
             std::ostringstream error;
-            error << "Errors at index "
-                  << i << " (" << a[i] << "!=" << b[i] << ")" << std::endl;
+            error << file << "(" << line << "): " << "Buffers are not equals... "
+                  << "at index " << i << " (" << a[i] << "!=" << b[i] << ")" << std::endl;
 
-            throw test_exception(std::string(file) + " " + "Buffers are not equals: " + error.str());
+            throw test_exception(error.str());
+        }
+    }
+}
+
+template<>
+void check_buffers_are_equal_(const char* file, int line, int8* a, int8* b, uint32 size)
+{
+    for (uint32 i = 0; i < size; ++i)
+    {
+        if (a[i] != b[i])
+        {
+            std::ostringstream error;
+            error << file << "(" << line << "): " << "Buffers are not equals... "
+                  << "at index " << i << " (" << (int32)a[i] << "!=" << (int32)b[i] << ")" << std::endl;
+
+            throw test_exception(error.str());
+        }
+    }
+}
+
+template<>
+void check_buffers_are_equal_(const char* file, int line, uint8* a, uint8* b, uint32 size)
+{
+    for (uint32 i = 0; i < size; ++i)
+    {
+        if (a[i] != b[i])
+        {
+            std::ostringstream error;
+            error << file << "(" << line << "): " << "Buffers are not equals... "
+                  << "at index " << i << " (" << (uint32)a[i] << "!=" << (uint32)b[i] << ")" << std::endl;
+
+            throw test_exception(error.str());
         }
     }
 }

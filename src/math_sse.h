@@ -272,6 +272,56 @@ public:
 
     //--------------------------------------------------------------------------
 
+    void scale_buffer_float(
+        float* src_buffer,
+        uint32 size,
+        double gain) const
+    {
+        if (size < SSE_MIN_SAMPLES)
+        {
+            math_mmx::scale_buffer_float(src_buffer, size, gain);
+        }
+        else
+        {
+            assert(size >= SSE_MIN_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
+
+            const disable_sse_denormals disable_denormals;
+
+            // Copy unaligned head
+            sse_unroll_head(
+                --size;
+                *src_buffer = *src_buffer * (float)gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
+            );
+
+            // Scale with simd
+            const __m128 vscale =_mm_set1_ps((float)gain);
+            __m128* vector_buffer = (__m128*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *vector_buffer = _mm_mul_ps(*vector_buffer, vscale);
+                ++vector_buffer;
+            }
+
+            // Handle any unaligned leftovers
+            src_buffer = (float*)vector_buffer;
+
+            sse_unroll_tail(
+                *src_buffer = *src_buffer * (float)gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
     void copy_buffer_float(
         float* src_buffer,
         float* dst_buffer,

@@ -186,6 +186,24 @@
         ::fedisableexcept(FE_ALL_EXCEPT); \
         ::feclearexcept(FE_ALL_EXCEPT);
 
+    #define rounding_mode_type \
+        int
+
+    #define original_rounding_mode(var_name) \
+        var_name = fegetround();
+
+    #define round_float_to(mode) \
+        fesetround(mode);
+
+    #define round_float_to_nearest \
+        fesetround(FE_TONEAREST);
+    #define round_float_to_zero \
+        fesetround(FE_TOWARDZERO);
+    #define round_float_to_up \
+        fesetround(FE_UPWARD);
+    #define round_float_to_down \
+        fesetround(FE_DOWNWARD);
+
     //#define isnan(value) isnan(value) // already defined by gcc !
     //#define isinf(value) isinf(value) // already defined by gcc ! 
 
@@ -199,6 +217,24 @@
         __declspec(align(alignment)) type_name 
 
     #define forcedinline __forceinline
+
+    #define rounding_mode_type \
+        unsigned int
+
+    #define original_rounding_mode(var_name) \
+        var_name = _control_fp(0, 0);
+
+    #define round_float_to(mode) \
+        _control_fp(mode, _MCW_RC);
+
+    #define round_float_to_nearest \
+        _control_fp(_RC_NEAR, _MCW_RC);
+    #define round_float_to_zero \
+        _control_fp(_RC_CHOP, _MCW_RC);
+    #define round_float_to_up \
+        _control_fp(_RC_UP, _MCW_RC);
+    #define round_float_to_down \
+        _control_fp(_RC_DOWN, _MCW_RC);
 
     #define enable_floating_point_assertions \
         ::_clearfp(); \
@@ -290,6 +326,82 @@ typedef long long int64;
 typedef unsigned long long uint64;
 
 #endif
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+enum FloatRoundingModeTypes
+{
+    NEAREST,
+    ZERO,
+    UPWARD,
+    DOWNWARD
+};
+
+//------------------------------------------------------------------------------
+
+struct float_rounding_mode
+{
+    float_rounding_mode(FloatRoundingModeTypes type)
+    {
+        original_rounding_mode(old_mode_);
+
+        switch(type)
+        {
+        case NEAREST:
+            round_float_to_nearest;
+            break;
+        case ZERO:
+            round_float_to_zero;
+            break;
+        case UPWARD:
+            round_float_to_up;
+            break;
+        case DOWNWARD:
+            round_float_to_down;
+            break;
+        }
+    }
+
+    ~float_rounding_mode()
+    {
+        round_float_to(old_mode_);
+    }
+
+private:
+    rounding_mode_type old_mode_;
+};
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+class round
+{
+public:
+    static forcedinline int f2i(float f)
+    {
+      #if defined(WATERSPOUT_COMPILER_MSVC)
+          __asm cvttss2si eax,f
+
+      #else
+          int i;
+          __asm__ ( "cvttss2si %1, %0" : "=r" (i) : "m" (f) );
+          return i;
+
+      #endif
+    }
+
+    static forcedinline int d2i(double d)
+    {
+        // compiler will always use cvttsd2si if possible
+        return (int)d;
+    }
+};
+
 
 //==============================================================================
 
@@ -521,6 +633,11 @@ typedef aligned_buffer<double, 32> double_buffer;
         datatype * src_buffer, \
         uint32 size, \
         float gain) const = 0; \
+    \
+    virtual void scale_buffer_ ##datatype ( \
+        datatype * src_buffer, \
+        uint32 size, \
+        double gain) const = 0; \
     \
     virtual void copy_buffer_ ##datatype ( \
         datatype * src_buffer, \

@@ -43,7 +43,7 @@
 //------------------------------------------------------------------------------
 
 #define test_clear_buffer_impl(simd, datatype, s) \
-    void test_clear_buffer_##simd##_##datatype() \
+    void test_##simd##_clear_buffer_##datatype() \
     { \
         datatype##_buffer buffer1(s); \
         datatype##_buffer buffer2(s); \
@@ -53,15 +53,15 @@
     }
 
 #define test_set_buffer_impl(simd, datatype, s) \
-    void test_set_buffer_##simd##_##datatype() \
+    void test_##simd##_set_buffer_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)1); \
-        fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)500); \
+        fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)500); \
         check_buffer_is_value(buffer1a.data(), s, (datatype)1); \
         check_buffer_is_value(buffer1b.data(), s, (datatype)500); \
@@ -70,18 +70,20 @@
     }
 
 #define test_scale_buffer_impl(simd, datatype, s) \
-    void test_scale_buffer_##simd##_##datatype() \
+    void test_##simd##_scale_buffer_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
-        simd->scale_buffer_ ##datatype (buffer1a.data(), s, 2.0f); \
-        fpu->scale_buffer_ ##datatype (buffer2a.data(), s, 2.0f); \
+        simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)100); \
+        simd->scale_buffer_ ##datatype (buffer1a.data(), s, 0.5f); \
+        fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)100); \
+        fpu->scale_buffer_ ##datatype (buffer2a.data(), s, 0.5f); \
+        check_buffer_is_value(buffer1a.data(), s, (datatype)50); \
         check_buffers_are_equal(buffer1a.data(), buffer2a.data(), s); \
     }
 
-
 #define test_copy_buffer_impl(simd, datatype, s) \
-    void test_copy_buffer_##simd##_##datatype() \
+    void test_##simd##_copy_buffer_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
@@ -96,7 +98,7 @@
     }
 
 #define test_add_buffers_impl(simd, datatype, s) \
-    void test_add_buffers_##simd##_##datatype() \
+    void test_##simd##_add_buffers_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
@@ -115,7 +117,7 @@
     }
 
 #define test_subtract_buffers_impl(simd, datatype, s) \
-    void test_subtract_buffers_##simd##_##datatype() \
+    void test_##simd##_subtract_buffers_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
@@ -134,7 +136,7 @@
     }
 
 #define test_multiply_buffers_impl(simd, datatype, s) \
-    void test_multiply_buffers_##simd##_##datatype() \
+    void test_##simd##_multiply_buffers_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
@@ -153,7 +155,7 @@
     }
 
 #define test_divide_buffers_impl(simd, datatype, s) \
-    void test_divide_buffers_##simd##_##datatype() \
+    void test_##simd##_divide_buffers_##datatype() \
     { \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
@@ -199,15 +201,19 @@
 
 //------------------------------------------------------------------------------
 
+#define add_test_macro(clazz, func, simd_impl, datatype) \
+    add_test(#clazz "::test_" #simd_impl "_" #func "_" #datatype, \
+        static_cast<test_runner::test_function>(&clazz::test_##simd_impl##_##func##_##datatype));
+
 #define add_tests_for_impl_datatype(simd, datatype) \
-    add_test_macro(test_buffers, test_clear_buffer, simd, datatype); \
-    add_test_macro(test_buffers, test_set_buffer, simd, datatype); \
-    add_test_macro(test_buffers, test_scale_buffer, simd, datatype); \
-    add_test_macro(test_buffers, test_copy_buffer, simd, datatype); \
-    add_test_macro(test_buffers, test_add_buffers, simd, datatype); \
-    add_test_macro(test_buffers, test_subtract_buffers, simd, datatype); \
-    add_test_macro(test_buffers, test_multiply_buffers, simd, datatype); \
-    add_test_macro(test_buffers, test_divide_buffers, simd, datatype);
+    add_test_macro(test_buffers, clear_buffer, simd, datatype); \
+    add_test_macro(test_buffers, set_buffer, simd, datatype); \
+    add_test_macro(test_buffers, scale_buffer, simd, datatype); \
+    add_test_macro(test_buffers, copy_buffer, simd, datatype); \
+    add_test_macro(test_buffers, add_buffers, simd, datatype); \
+    add_test_macro(test_buffers, subtract_buffers, simd, datatype); \
+    add_test_macro(test_buffers, multiply_buffers, simd, datatype); \
+    add_test_macro(test_buffers, divide_buffers, simd, datatype);
 
 #define add_tests_for_impl(simd) \
     add_tests_for_impl_datatype(simd, int8); \

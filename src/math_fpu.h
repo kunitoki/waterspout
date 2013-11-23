@@ -104,6 +104,14 @@ public:
             scale_buffer_generic(src_buffer, size, gain); \
         } \
         \
+        void scale_buffer_ ##datatype ( \
+            datatype* src_buffer, \
+            uint32 size, \
+            double gain) const \
+        { \
+            scale_buffer_generic(src_buffer, size, gain); \
+        } \
+        \
         void copy_buffer_ ##datatype ( \
             datatype* src_buffer, \
             datatype* dst_buffer, \
@@ -203,6 +211,23 @@ public:
         }
     }
 
+
+    //--------------------------------------------------------------------------
+
+    void scale_buffer_float(
+        float* src_buffer,
+        uint32 size,
+        double gain) const
+    {
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *src_buffer = *src_buffer * static_cast<float>(gain);
+          undenormalizef(*src_buffer);
+          ++src_buffer;
+        }
+    }
 
     //--------------------------------------------------------------------------
 
@@ -312,6 +337,24 @@ public:
         for (uint32 i = 0; i < size; ++i)
         {
           *src_buffer = *src_buffer * (double)gain;
+          undenormalized(*src_buffer);
+          ++src_buffer;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void scale_buffer_double(
+        double* src_buffer,
+        uint32 size,
+        double gain) const
+    {
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32 i = 0; i < size; ++i)
+        {
+          *src_buffer = *src_buffer * gain;
           undenormalized(*src_buffer);
           ++src_buffer;
         }
@@ -433,8 +476,25 @@ private:
 
         for (uint32 i = 0; i < size; ++i)
         {
-          *src_buffer = static_cast<T>(*src_buffer * gain);
-          ++src_buffer;
+            *src_buffer = static_cast<T>(round::f2i((float)(*src_buffer) * gain));
+            ++src_buffer;
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    template<typename T> void scale_buffer_generic(
+        T* src_buffer,
+        uint32 size,
+        double gain) const
+    {
+        const disable_fpu_denormals disable_denormals;
+
+        for (uint32 i = 0; i < size; ++i)
+        {
+            *src_buffer = static_cast<T>(round::d2i((double)(*src_buffer) * gain));
+            ++src_buffer;
         }
     }
 

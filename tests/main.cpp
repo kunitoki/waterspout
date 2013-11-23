@@ -29,6 +29,8 @@
 
 #include <waterspout.h>
 
+#include <cstdlib>
+
 #include "common.h"
 #include "unittest.h"
 
@@ -42,9 +44,9 @@ int main(int argc, char* argv[])
     unused(argc);
     unused(argv);
 
-    test_buffers test_buffers_runner;
-    test_buffers_runner.run_tests();
-    test_buffers_runner.print_results();
+    test_buffers test1;
+    test1.run_tests();
+    test1.print_results();
 
-    return 0;
+    return test1.num_invalid_tests() > 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
