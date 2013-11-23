@@ -23,6 +23,17 @@ the software FPU fallback it's possible to run the same code on different and
 even older CPUs.
 
 
+Strong points
+-------------
+  * simple and clear
+  * accurate
+  * fast
+  * automatically detect the best configuration based on the running CPU features
+  * drop in include in your project (2 files only needed to be included)
+  * no dependencies on third party libraries
+  * extensive unit testing for all operations
+
+
 Usage
 -----
 
