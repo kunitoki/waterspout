@@ -18,6 +18,7 @@
 --===========================================================================--
 
 local projectname = "waterspout"
+local projectkind = "ConsoleApp"
 
 
 --===========================================================================--
@@ -72,12 +73,12 @@ function setup_solution(projectname, projectkind, platformname)
   configuration {}
 
   -- specific configurations
-  configuration { "debug" }
+  configuration { "debug*" }
     defines { "DEBUG=1" }
     flags { "Symbols" }
   configuration {}
 
-  configuration { "release" }
+  configuration { "release*" }
     defines { "NDEBUG=1" }
     flags { "OptimizeSpeed" }
   configuration {}
@@ -88,14 +89,15 @@ function setup_solution(projectname, projectkind, platformname)
   
   -- include directories
   includedirs {
-    "../include"
+    "../include",
+    "../tests"
   }
 
   -- project files
   files {
     "../src/*.h",
     "../src/*.cpp",
-    "../test/*.cpp"
+    "../tests/*.cpp"
   }
   
 end
@@ -107,7 +109,7 @@ end
 
 --===========================================================================--
 if _ACTION == "gmake" then
-  setup_solution(projectname, "ConsoleApp", "Linux")
+  setup_solution(projectname, projectkind, "Linux")
   
   defines {
     "LINUX=1"
@@ -128,7 +130,7 @@ if _ACTION == "gmake" then
 
 --===========================================================================--
 elseif _ACTION == "vs2010" then
-  setup_solution(projectname, "ConsoleApp", "Windows")
+  setup_solution(projectname, projectkind, "Windows")
 
   buildoptions {
     "/wd4244", -- disable conversion double > float warning
@@ -147,7 +149,7 @@ elseif _ACTION == "vs2010" then
   
 --===========================================================================--
 elseif _ACTION == "xcode3" then
-  setup_solution(projectname, "ConsoleApp", "MacOSX")
+  setup_solution(projectname, projectkind, "MacOSX")
   
   links {
     "AudioToolbox.framework",

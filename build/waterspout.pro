@@ -6,7 +6,7 @@ CONFIG  -= qt
 ROOTDIR = $$PWD/..
 INCLUDEDIR = $$ROOTDIR/include
 SRCDIR = $$ROOTDIR/src
-TESTDIR = $$ROOTDIR/test
+TESTDIR = $$ROOTDIR/tests
 DESTDIR = $$ROOTDIR/bin
 OBJECTS_DIR = $$DESTDIR/temp
 
@@ -21,7 +21,9 @@ HEADERS += \
   $$SRCDIR/math_sse3.h \
   $$SRCDIR/math_sse41.h \
   $$SRCDIR/math_sse42.h \
-  $$SRCDIR/math_ssse3.h
+  $$SRCDIR/math_ssse3.h \
+  $$TESTDIR/unittest.h \
+  $$TESTDIR/common.h
 
 SOURCES += \
   $$SRCDIR/waterspout.cpp \

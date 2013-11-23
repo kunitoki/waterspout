@@ -313,6 +313,12 @@ public:
     {
     }
 
+    scoped_ptr(const scoped_ptr<T>& other)
+    {
+        object_ptr_ = other.object_ptr_;
+        const_cast< scoped_ptr<T>& >(other).object_ptr_ = NULL;
+    }
+
     ~scoped_ptr()
     {
         if (object_ptr_ != NULL)
@@ -352,12 +358,15 @@ public:
         object_ptr_ = object_ptr;
     }
 
+    forcedinline const scoped_ptr<T>& operator=(const scoped_ptr<T>& other)
+    {
+        object_ptr_ = other.object_ptr_;
+        const_cast< scoped_ptr<T>& >(other).object_ptr_ = NULL;
+        return *this;
+    }
+
 private:
     T* object_ptr_;
-
-    // noncopyable
-    scoped_ptr(const scoped_ptr&);
-    const scoped_ptr& operator=(const scoped_ptr&);
 };
 
 
