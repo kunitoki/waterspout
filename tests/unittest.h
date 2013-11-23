@@ -196,16 +196,6 @@
     test_functions_for_impl_datatype(simd, float); \
     test_functions_for_impl_datatype(simd, double);
 
-#define test_functions \
-    test_functions_for_impl(mmx); \
-    test_functions_for_impl(sse); \
-    test_functions_for_impl(sse2); \
-    test_functions_for_impl(sse3); \
-    test_functions_for_impl(ssse3); \
-    test_functions_for_impl(sse41); \
-    test_functions_for_impl(sse42); \
-    test_functions_for_impl(avx);
-
 
 //------------------------------------------------------------------------------
 
@@ -231,16 +221,6 @@
     add_tests_for_impl_datatype(simd, float); \
     add_tests_for_impl_datatype(simd, double);
 
-#define add_tests \
-    add_tests_for_impl(mmx); \
-    add_tests_for_impl(sse); \
-    add_tests_for_impl(sse2); \
-    add_tests_for_impl(sse3); \
-    add_tests_for_impl(ssse3); \
-    add_tests_for_impl(sse41); \
-    add_tests_for_impl(sse42); \
-    add_tests_for_impl(avx);
-
 
 //------------------------------------------------------------------------------
 
@@ -249,32 +229,114 @@ class test_buffers : public test_runner
 public:
     test_buffers()
         : fpu(FORCE_FPU),
-          mmx(FORCE_MMX),
-          sse(FORCE_SSE),
-          sse2(FORCE_SSE2),
-          sse3(FORCE_SSE3),
-          ssse3(FORCE_SSSE3),
-          sse41(FORCE_SSE41),
-          sse42(FORCE_SSE42),
-          avx(FORCE_AVX),
-          buffer_size(8192)
+        #if defined(WATERSPOUT_SIMD_MMX)
+            mmx(FORCE_MMX),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE)
+            sse(FORCE_SSE),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE2)
+            sse2(FORCE_SSE2),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE3)
+            sse3(FORCE_SSE3),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSSE3)
+            ssse3(FORCE_SSSE3),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE41)
+            sse41(FORCE_SSE41),
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE42)
+            sse42(FORCE_SSE42),
+        #endif
+        #if defined(WATERSPOUT_SIMD_AVX)
+            avx(FORCE_AVX),
+        #endif
+        buffer_size(8192)
     {
-        add_tests;
+        // add tests
+        #if defined(WATERSPOUT_SIMD_MMX)
+            add_tests_for_impl(mmx);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE)
+            add_tests_for_impl(sse);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE2)
+            add_tests_for_impl(sse2);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE3)
+            add_tests_for_impl(sse3);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSSE3)
+            add_tests_for_impl(ssse3);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE41)
+            add_tests_for_impl(sse41);
+        #endif
+        #if defined(WATERSPOUT_SIMD_SSE42)
+            add_tests_for_impl(sse42);
+        #endif
+        #if defined(WATERSPOUT_SIMD_AVX)
+            add_tests_for_impl(avx);
+        #endif
     }
 
-    test_functions
+    // implementations
+    #if defined(WATERSPOUT_SIMD_MMX)
+        test_functions_for_impl(mmx)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE)
+        test_functions_for_impl(sse)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE2)
+        test_functions_for_impl(sse2)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE3)
+        test_functions_for_impl(sse3)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSSE3)
+        test_functions_for_impl(ssse3)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE41)
+        test_functions_for_impl(sse41)
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE42)
+        test_functions_for_impl(sse42)
+    #endif
+    #if defined(WATERSPOUT_SIMD_AVX)
+        test_functions_for_impl(avx)
+    #endif
 
 private:
 
     math fpu;
-    math mmx;
-    math sse;
-    math sse2;
-    math sse3;
-    math ssse3;
-    math sse41;
-    math sse42;
-    math avx;
+
+    // math test classes
+    #if defined(WATERSPOUT_SIMD_MMX)
+        math mmx;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE)
+        math sse;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE2)
+        math sse2;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE3)
+        math sse3;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSSE3)
+        math ssse3;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE41)
+        math sse41;
+    #endif
+    #if defined(WATERSPOUT_SIMD_SSE42)
+        math sse42;
+    #endif
+    #if defined(WATERSPOUT_SIMD_AVX)
+        math avx;
+    #endif
 
     int buffer_size;
 };

@@ -393,7 +393,7 @@ protected:
 //------------------------------------------------------------------------------
 
 template<typename T>
-void check_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
+void check_buffer_is_value_(const char* file, int /*line*/, T* buffer, uint32 size, T value)
 {
     for (uint32 i = 0; i < size; ++i)
     {
@@ -415,7 +415,7 @@ void check_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
 }
 
 template<typename T>
-void check_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
+void check_buffers_are_equal_(const char* file, int /*line*/, T* a, T* b, uint32 size)
 {
     for (uint32 i = 0; i < size; ++i)
     {
