@@ -73,6 +73,19 @@
 
 
 /**
+ * System bits definitions
+ */
+
+#if defined(__X86_64__) || defined(__LP64__)
+    #define WATERSPOUT_SYSTEM_64BIT 1
+
+#else
+    #define WATERSPOUT_SYSTEM_32BIT 1
+
+#endif
+
+
+/**
  * System definitions
  */
 
@@ -689,9 +702,13 @@ public:
     math_interface_common_functions(float)
     math_interface_common_functions(double)
 
+    // Other misc functions
+
+    // Destructor
     virtual ~math_interface_() { }
 
 protected:
+    // Constructor
     math_interface_() { }
 };
 

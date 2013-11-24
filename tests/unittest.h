@@ -205,6 +205,10 @@
     add_test(#clazz "::test_" #simd_impl "_" #func "_" #datatype, \
         static_cast<test_runner::test_function>(&clazz::test_##simd_impl##_##func##_##datatype));
 
+#define add_test_macro_no_datatype(clazz, func, simd_impl) \
+    add_test(#clazz "::test_" #simd_impl "_" #func, \
+        static_cast<test_runner::test_function>(&clazz::test_##simd_impl##_##func));
+
 #define add_tests_for_impl_datatype(simd, datatype) \
     add_test_macro(test_buffers, clear_buffer, simd, datatype); \
     add_test_macro(test_buffers, set_buffer, simd, datatype); \

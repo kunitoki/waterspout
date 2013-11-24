@@ -72,7 +72,6 @@ public:
 
     math_fpu()
     {
-        //assertfalse; // not implemented !
     }
 
 

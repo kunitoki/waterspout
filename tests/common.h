@@ -351,6 +351,78 @@ protected:
 //------------------------------------------------------------------------------
 
 template<typename T>
+void check_value_is_equal_(const char* file, int line, T a, T b)
+{
+    if (a != b)
+    {
+        std::ostringstream error;
+        error << file << "(" << line << "): " << "Values should be equal..."
+              << " (" << a << "!=" << b << ")" << std::endl;
+
+        throw test_exception(error.str());
+    }
+}
+
+template<typename T>
+void check_value_is_not_equal_(const char* file, int line, T a, T b)
+{
+    if (a == b)
+    {
+        std::ostringstream error;
+        error << file << "(" << line << "): " << "Values should be not equal..."
+              << " (" << a << "==" << b << ")" << std::endl;
+
+        throw test_exception(error.str());
+    }
+}
+
+template<typename T>
+void check_value_is_less_(const char* file, int line, T a, T b)
+{
+    if (a < b)
+    {
+        std::ostringstream error;
+        error << file << "(" << line << "): " << "Value A should be less than B..."
+              << " (" << a << ">=" << b << ")" << std::endl;
+
+        throw test_exception(error.str());
+    }
+}
+
+template<typename T>
+void check_value_is_more_(const char* file, int line, T a, T b)
+{
+    if (a < b)
+    {
+        std::ostringstream error;
+        error << file << "(" << line << "): " << "Value A should be more than B..."
+              << " (" << a << "<=" << b << ")" << std::endl;
+
+        throw test_exception(error.str());
+    }
+}
+
+
+//------------------------------------------------------------------------------
+
+#define check_value_is_equal(a, b) \
+    check_value_is_equal_(__FILE__, __LINE__, a, b);
+
+#define check_value_is_not_equal(a, b) \
+    check_value_is_not_equal_(__FILE__, __LINE__, a, b);
+
+#define check_value_is_less(a, b) \
+    check_value_is_less_(__FILE__, __LINE__, a, b);
+
+#define check_value_is_more(a, b) \
+    check_value_is_more_(__FILE__, __LINE__, a, b);
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
+template<typename T>
 void check_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
 {
     for (uint32 i = 0; i < size; ++i)
