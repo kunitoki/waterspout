@@ -70,7 +70,7 @@ public:
     enum SSEMathDefines
     {
         MMX_MIN_SIZE    = 2,
-        MMX_MIN_SAMPLES = 32,
+        MMX_MIN_SAMPLES = 16,
         MMX_ALIGN       = 0x0F
     };
 
