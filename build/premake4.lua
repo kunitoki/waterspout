@@ -99,7 +99,7 @@ function setup_solution(projectname, projectkind, platformname)
     "../src/*.cpp",
     "../tests/*.cpp"
   }
-  
+
 end
 
 

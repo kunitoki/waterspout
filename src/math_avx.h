@@ -35,7 +35,7 @@
 
 //------------------------------------------------------------------------------
 
-#define avx_unroll_head(s) \
+#define avx_unroll_head_float(s) \
     switch (align_bytes >> 3) \
     { \
     case 1: s; \
@@ -47,13 +47,29 @@
     case 7: s; \
     }
 
-#define avx_unroll_tail(s) \
+#define avx_unroll_tail_float(s) \
     switch (size & 7) \
     { \
     case 7: s; \
     case 6: s; \
     case 5: s; \
     case 4: s; \
+    case 3: s; \
+    case 2: s; \
+    case 1: s; \
+    }
+
+#define avx_unroll_head_double(s) \
+    switch (align_bytes >> 2) \
+    { \
+    case 1: s; \
+    case 2: s; \
+    case 3: s; \
+    }
+
+#define avx_unroll_tail_double(s) \
+    switch (size & 3) \
+    { \
     case 3: s; \
     case 2: s; \
     case 1: s; \
@@ -95,6 +111,8 @@ public:
     }
 
     
+    //==========================================================================
+
     //--------------------------------------------------------------------------
 
     void clear_buffer_float(
@@ -104,7 +122,7 @@ public:
         if (size < AVX_MIN_SAMPLES)
         {
             math_sse42::clear_buffer_float(src_buffer, size);
-        } 
+        }
         else 
         { 
             assert(size >= AVX_MIN_SIZE);
@@ -112,7 +130,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
 
             // Copy unaligned head
-            avx_unroll_head(
+            avx_unroll_head_float(
                 --size;
                 *src_buffer++ = 0.0f;
             );
@@ -132,7 +150,7 @@ public:
             // Handle unaligned leftovers
             src_buffer = (float*)source_vector;
 
-            avx_unroll_tail(
+            avx_unroll_tail_float(
                 *src_buffer++ = 0.0f;
             );
         }
@@ -157,7 +175,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
 
             // Copy unaligned head
-            avx_unroll_head(
+            avx_unroll_head_float(
                 --size;
                 *src_buffer++ = value;
             );
@@ -177,8 +195,57 @@ public:
             // Handle unaligned leftovers
             src_buffer = (float*)source_vector;
 
-            avx_unroll_tail(
+            avx_unroll_tail_float(
                 *src_buffer++ = value;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void scale_buffer_float(
+        float* src_buffer,
+        uint32 size,
+        float gain) const
+    {
+        if (size < AVX_MIN_SAMPLES)
+        {
+            math_sse42::scale_buffer_float(src_buffer, size, gain);
+        }
+        else
+        {
+            assert(size >= AVX_MIN_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
+
+            // Copy unaligned head
+            avx_unroll_head_float(
+                --size;
+                *src_buffer = *src_buffer * gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
+            );
+
+            // Copy with simd
+            const __m256 vscale = _mm256_set1_ps(gain);
+            __m256* source_vector = (__m256*)src_buffer;
+
+            uint32 vector_count = size >> 3;
+            while (vector_count--)
+            {
+                *source_vector = _mm256_mul_ps(*source_vector, vscale);
+
+                ++source_vector;
+            }
+
+            // Handle unaligned leftovers
+            src_buffer = (float*)source_vector;
+
+            avx_unroll_tail_float(
+                *src_buffer = *src_buffer * gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
             );
         }
     }
@@ -203,7 +270,7 @@ public:
             assert(size >= AVX_MIN_SIZE);
 
             // Copy unaligned head
-            avx_unroll_head(
+            avx_unroll_head_float(
                 --size;
                 *dst_buffer++ = *src_buffer++;
             );
@@ -225,7 +292,195 @@ public:
             src_buffer = (float*)source_vector;
             dst_buffer = (float*)dest_vector;
 
-            avx_unroll_tail(
+            avx_unroll_tail_float(
+                *dst_buffer++ = *src_buffer++;
+            );
+        }
+    }
+
+
+    //==========================================================================
+
+    //--------------------------------------------------------------------------
+
+    void clear_buffer_double(
+        double* src_buffer,
+        uint32 size) const
+    {
+        if (size < AVX_MIN_SAMPLES)
+        {
+            math_sse42::clear_buffer_double(src_buffer, size);
+        }
+        else
+        {
+            assert(size >= AVX_MIN_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
+
+            // Copy unaligned head
+            avx_unroll_head_double(
+                --size;
+                *src_buffer++ = 0.0;
+            );
+
+            // Copy with simd
+            const __m256d vvalue = _mm256_setzero_pd();
+            __m256d* source_vector = (__m256d*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *source_vector = vvalue;
+
+                ++source_vector;
+            }
+
+            // Handle unaligned leftovers
+            src_buffer = (double*)source_vector;
+
+            avx_unroll_tail_double(
+                *src_buffer++ = 0.0;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void set_buffer_double(
+        double* src_buffer,
+        uint32 size,
+        double value) const
+    {
+        if (size < AVX_MIN_SAMPLES)
+        {
+            math_sse42::set_buffer_double(src_buffer, size, value);
+        }
+        else
+        {
+            assert(size >= AVX_MIN_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
+
+            // Copy unaligned head
+            avx_unroll_head_double(
+                --size;
+                *src_buffer++ = value;
+            );
+
+            // Copy with simd
+            const __m256d vvalue = _mm256_set1_pd(value);
+            __m256d* source_vector = (__m256d*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *source_vector = vvalue;
+
+                ++source_vector;
+            }
+
+            // Handle unaligned leftovers
+            src_buffer = (double*)source_vector;
+
+            avx_unroll_tail_double(
+                *src_buffer++ = value;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void scale_buffer_double(
+        double* src_buffer,
+        uint32 size,
+        float gain) const
+    {
+        if (size < AVX_MIN_SAMPLES)
+        {
+            math_sse42::scale_buffer_double(src_buffer, size, gain);
+        }
+        else
+        {
+            assert(size >= AVX_MIN_SIZE);
+
+            const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
+
+            // Copy unaligned head
+            avx_unroll_head_double(
+                --size;
+                *src_buffer = *src_buffer * (double)gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
+            );
+
+            // Copy with simd
+            const __m256d vscale = _mm256_set1_pd((double)gain);
+            __m256d* source_vector = (__m256d*)src_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *source_vector = _mm256_mul_pd(*source_vector, vscale);
+
+                ++source_vector;
+            }
+
+            // Handle unaligned leftovers
+            src_buffer = (double*)source_vector;
+
+            avx_unroll_tail_double(
+                *src_buffer = *src_buffer * (double)gain;
+                undenormalizef(*src_buffer);
+                ++src_buffer;
+            );
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+
+    void copy_buffer_double(
+        double* src_buffer,
+        double* dst_buffer,
+        uint32 size) const
+    {
+        const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & AVX_ALIGN);
+
+        if (size < AVX_MIN_SAMPLES ||
+              ((ptrdiff_t)dst_buffer & AVX_ALIGN) != align_bytes)
+        {
+            math_sse42::copy_buffer_double(src_buffer, dst_buffer, size);
+        }
+        else
+        {
+            assert(size >= AVX_MIN_SIZE);
+
+            // Copy unaligned head
+            avx_unroll_head_double(
+                --size;
+                *dst_buffer++ = *src_buffer++;
+            );
+
+            // Copy with simd
+            __m256d* source_vector = (__m256d*)src_buffer;
+            __m256d* dest_vector = (__m256d*)dst_buffer;
+
+            uint32 vector_count = size >> 2;
+            while (vector_count--)
+            {
+                *dest_vector = *source_vector;
+
+                ++dest_vector;
+                ++source_vector;
+            }
+
+            // Handle unaligned leftovers
+            src_buffer = (double*)source_vector;
+            dst_buffer = (double*)dest_vector;
+
+            avx_unroll_tail_double(
                 *dst_buffer++ = *src_buffer++;
             );
         }
