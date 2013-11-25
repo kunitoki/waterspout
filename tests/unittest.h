@@ -32,171 +32,207 @@
 
 #include "common.h"
 
-#include <stdexcept>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-
 
 //==============================================================================
 
 //------------------------------------------------------------------------------
 
-#define test_clear_buffer_impl(simd, datatype, s) \
+#define test_clear_buffer_impl(simd, simd_type, datatype, s) \
     void test_##simd##_clear_buffer_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1(s); \
         datatype##_buffer buffer2(s); \
+        \
         simd->clear_buffer_##datatype (buffer1.data(), s); \
         fpu->clear_buffer_##datatype (buffer2.data(), s); \
-        check_buffers_are_equal(buffer1.data(), buffer2.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1.data(), s, (datatype)0); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1.data(), buffer2.data(), s); \
     }
 
-#define test_set_buffer_impl(simd, datatype, s) \
+#define test_set_buffer_impl(simd, simd_type, datatype, s) \
     void test_##simd##_set_buffer_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)1); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)500); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)500); \
-        check_buffer_is_value(buffer1a.data(), s, (datatype)1); \
-        check_buffer_is_value(buffer1b.data(), s, (datatype)500); \
-        check_buffers_are_equal(buffer1a.data(), buffer2a.data(), s); \
-        check_buffers_are_equal(buffer1b.data(), buffer2b.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1a.data(), s, (datatype)1); \
+        TEST_BUFFER_IS_VALUE(buffer1b.data(), s, (datatype)500); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1a.data(), buffer2a.data(), s); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1b.data(), buffer2b.data(), s); \
     }
 
-#define test_scale_buffer_impl(simd, datatype, s) \
+#define test_scale_buffer_impl(simd, simd_type, datatype, s) \
     void test_##simd##_scale_buffer_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)100); \
         simd->scale_buffer_ ##datatype (buffer1a.data(), s, 0.5f); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)100); \
         fpu->scale_buffer_ ##datatype (buffer2a.data(), s, 0.5f); \
-        check_buffer_is_value(buffer1a.data(), s, (datatype)50); \
-        check_buffers_are_equal(buffer1a.data(), buffer2a.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1a.data(), s, (datatype)50); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1a.data(), buffer2a.data(), s); \
     }
 
-#define test_copy_buffer_impl(simd, datatype, s) \
+#define test_copy_buffer_impl(simd, simd_type, datatype, s) \
     void test_##simd##_copy_buffer_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1dest(s); \
         datatype##_buffer buffer2dest(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)1); \
         simd->copy_buffer_ ##datatype (buffer1a.data(), buffer1dest.data(), s); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         fpu->copy_buffer_ ##datatype (buffer2a.data(), buffer2dest.data(), s); \
-        check_buffer_is_value(buffer1dest.data(), s, (datatype)1); \
-        check_buffers_are_equal(buffer1dest.data(), buffer2dest.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1dest.data(), s, (datatype)1); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1dest.data(), buffer2dest.data(), s); \
     }
 
-#define test_add_buffers_impl(simd, datatype, s) \
+#define test_add_buffers_impl(simd, simd_type, datatype, s) \
     void test_##simd##_add_buffers_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
         datatype##_buffer buffer1dest(s); \
         datatype##_buffer buffer2dest(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)1); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)1); \
         simd->add_buffers_ ##datatype (buffer1a.data(), buffer1b.data(), buffer1dest.data(), s); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)1); \
         fpu->add_buffers_ ##datatype (buffer2a.data(), buffer2b.data(), buffer2dest.data(), s); \
-        check_buffer_is_value(buffer1dest.data(), s, (datatype)2); \
-        check_buffers_are_equal(buffer1dest.data(), buffer2dest.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1dest.data(), s, (datatype)2); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1dest.data(), buffer2dest.data(), s); \
     }
 
-#define test_subtract_buffers_impl(simd, datatype, s) \
+#define test_subtract_buffers_impl(simd, simd_type, datatype, s) \
     void test_##simd##_subtract_buffers_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
         datatype##_buffer buffer1dest(s); \
         datatype##_buffer buffer2dest(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)1); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)1); \
         simd->subtract_buffers_ ##datatype (buffer1a.data(), buffer1b.data(), buffer1dest.data(), s); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)1); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)1); \
         fpu->subtract_buffers_ ##datatype (buffer2a.data(), buffer2b.data(), buffer2dest.data(), s); \
-        check_buffer_is_value(buffer1dest.data(), s, (datatype)0); \
-        check_buffers_are_equal(buffer1dest.data(), buffer2dest.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1dest.data(), s, (datatype)0); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1dest.data(), buffer2dest.data(), s); \
     }
 
-#define test_multiply_buffers_impl(simd, datatype, s) \
+#define test_multiply_buffers_impl(simd, simd_type, datatype, s) \
     void test_##simd##_multiply_buffers_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
         datatype##_buffer buffer1dest(s); \
         datatype##_buffer buffer2dest(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)2); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)2); \
         simd->multiply_buffers_ ##datatype (buffer1a.data(), buffer1b.data(), buffer1dest.data(), s); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)2); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)2); \
         fpu->multiply_buffers_ ##datatype (buffer2a.data(), buffer2b.data(), buffer2dest.data(), s); \
-        check_buffer_is_value(buffer1dest.data(), s, (datatype)4); \
-        check_buffers_are_equal(buffer1dest.data(), buffer2dest.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1dest.data(), s, (datatype)4); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1dest.data(), buffer2dest.data(), s); \
     }
 
-#define test_divide_buffers_impl(simd, datatype, s) \
+#define test_divide_buffers_impl(simd, simd_type, datatype, s) \
     void test_##simd##_divide_buffers_##datatype() \
     { \
+        math fpu(FORCE_FPU); \
+        math simd(simd_type); \
+        \
         datatype##_buffer buffer1a(s); \
         datatype##_buffer buffer2a(s); \
         datatype##_buffer buffer1b(s); \
         datatype##_buffer buffer2b(s); \
         datatype##_buffer buffer1dest(s); \
         datatype##_buffer buffer2dest(s); \
+        \
         simd->set_buffer_ ##datatype (buffer1a.data(), s, (datatype)4); \
         simd->set_buffer_ ##datatype (buffer1b.data(), s, (datatype)2); \
         simd->divide_buffers_ ##datatype (buffer1a.data(), buffer1b.data(), buffer1dest.data(), s); \
         fpu->set_buffer_ ##datatype (buffer2a.data(), s, (datatype)4); \
         fpu->set_buffer_ ##datatype (buffer2b.data(), s, (datatype)2); \
         fpu->divide_buffers_ ##datatype (buffer2a.data(), buffer2b.data(), buffer2dest.data(), s); \
-        check_buffer_is_value(buffer1dest.data(), s, (datatype)2); \
-        check_buffers_are_equal(buffer1dest.data(), buffer2dest.data(), s); \
+        \
+        TEST_BUFFER_IS_VALUE(buffer1dest.data(), s, (datatype)2); \
+        TEST_BUFFERS_ARE_EQUAL(buffer1dest.data(), buffer2dest.data(), s); \
     }
 
 
 //------------------------------------------------------------------------------
 
-#define test_functions_for_impl_datatype(simd, datatype) \
-    test_clear_buffer_impl(simd, datatype, buffer_size) \
-    test_set_buffer_impl(simd, datatype, buffer_size) \
-    test_scale_buffer_impl(simd, datatype, buffer_size) \
-    test_copy_buffer_impl(simd, datatype, buffer_size) \
-    test_add_buffers_impl(simd, datatype, buffer_size) \
-    test_subtract_buffers_impl(simd, datatype, buffer_size) \
-    test_multiply_buffers_impl(simd, datatype, buffer_size) \
-    test_divide_buffers_impl(simd, datatype, buffer_size)
+#define test_functions_for_impl_datatype(simd, simd_type, datatype) \
+    test_clear_buffer_impl(simd, simd_type, datatype, buffer_size) \
+    test_set_buffer_impl(simd, simd_type, datatype, buffer_size) \
+    test_scale_buffer_impl(simd, simd_type, datatype, buffer_size) \
+    test_copy_buffer_impl(simd, simd_type, datatype, buffer_size) \
+    test_add_buffers_impl(simd, simd_type, datatype, buffer_size) \
+    test_subtract_buffers_impl(simd, simd_type, datatype, buffer_size) \
+    test_multiply_buffers_impl(simd, simd_type, datatype, buffer_size) \
+    test_divide_buffers_impl(simd, simd_type, datatype, buffer_size)
 
-#define test_functions_for_impl(simd) \
-    test_functions_for_impl_datatype(simd, int8); \
-    test_functions_for_impl_datatype(simd, uint8); \
-    test_functions_for_impl_datatype(simd, int16); \
-    test_functions_for_impl_datatype(simd, uint16); \
-    test_functions_for_impl_datatype(simd, int32); \
-    test_functions_for_impl_datatype(simd, uint32); \
-    test_functions_for_impl_datatype(simd, int64); \
-    test_functions_for_impl_datatype(simd, uint64); \
-    test_functions_for_impl_datatype(simd, float); \
-    test_functions_for_impl_datatype(simd, double);
+#define test_functions_for_impl(simd, simd_type) \
+    test_functions_for_impl_datatype(simd, simd_type, int8); \
+    test_functions_for_impl_datatype(simd, simd_type, uint8); \
+    test_functions_for_impl_datatype(simd, simd_type, int16); \
+    test_functions_for_impl_datatype(simd, simd_type, uint16); \
+    test_functions_for_impl_datatype(simd, simd_type, int32); \
+    test_functions_for_impl_datatype(simd, simd_type, uint32); \
+    test_functions_for_impl_datatype(simd, simd_type, int64); \
+    test_functions_for_impl_datatype(simd, simd_type, uint64); \
+    test_functions_for_impl_datatype(simd, simd_type, float); \
+    test_functions_for_impl_datatype(simd, simd_type, double);
 
 
 //------------------------------------------------------------------------------
@@ -238,115 +274,62 @@ class test_buffers : public test_runner
 {
 public:
     test_buffers()
-        : fpu(FORCE_FPU),
-        #if defined(WATERSPOUT_SIMD_MMX)
-            mmx(FORCE_MMX),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE)
-            sse(FORCE_SSE),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE2)
-            sse2(FORCE_SSE2),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE3)
-            sse3(FORCE_SSE3),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSSE3)
-            ssse3(FORCE_SSSE3),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE41)
-            sse41(FORCE_SSE41),
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE42)
-            sse42(FORCE_SSE42),
-        #endif
-        #if defined(WATERSPOUT_SIMD_AVX)
-            avx(FORCE_AVX),
-        #endif
-        buffer_size(8192)
+        : buffer_size(8192)
     {
         // add tests
-        #if defined(WATERSPOUT_SIMD_MMX)
-            add_tests_for_impl(mmx);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE)
-            add_tests_for_impl(sse);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE2)
-            add_tests_for_impl(sse2);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE3)
-            add_tests_for_impl(sse3);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSSE3)
-            add_tests_for_impl(ssse3);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE41)
-            add_tests_for_impl(sse41);
-        #endif
-        #if defined(WATERSPOUT_SIMD_SSE42)
-            add_tests_for_impl(sse42);
-        #endif
-        #if defined(WATERSPOUT_SIMD_AVX)
-            add_tests_for_impl(avx);
-        #endif
+#if defined(WATERSPOUT_SIMD_MMX)
+        add_tests_for_impl(mmx);
+#endif
+#if defined(WATERSPOUT_SIMD_SSE)
+        add_tests_for_impl(sse);
+#endif
+#if defined(WATERSPOUT_SIMD_SSE2)
+        add_tests_for_impl(sse2);
+#endif
+#if defined(WATERSPOUT_SIMD_SSE3)
+        add_tests_for_impl(sse3);
+#endif
+#if defined(WATERSPOUT_SIMD_SSSE3)
+        add_tests_for_impl(ssse3);
+#endif
+#if defined(WATERSPOUT_SIMD_SSE41)
+        add_tests_for_impl(sse41);
+#endif
+#if defined(WATERSPOUT_SIMD_SSE42)
+        add_tests_for_impl(sse42);
+#endif
+#if defined(WATERSPOUT_SIMD_AVX)
+        add_tests_for_impl(avx);
+#endif
     }
 
     // implementations
-    #if defined(WATERSPOUT_SIMD_MMX)
-        test_functions_for_impl(mmx)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE)
-        test_functions_for_impl(sse)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE2)
-        test_functions_for_impl(sse2)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE3)
-        test_functions_for_impl(sse3)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSSE3)
-        test_functions_for_impl(ssse3)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE41)
-        test_functions_for_impl(sse41)
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE42)
-        test_functions_for_impl(sse42)
-    #endif
-    #if defined(WATERSPOUT_SIMD_AVX)
-        test_functions_for_impl(avx)
-    #endif
+#if defined(WATERSPOUT_SIMD_MMX)
+    test_functions_for_impl(mmx, FORCE_MMX)
+#endif
+#if defined(WATERSPOUT_SIMD_SSE)
+    test_functions_for_impl(sse, FORCE_SSE)
+#endif
+#if defined(WATERSPOUT_SIMD_SSE2)
+    test_functions_for_impl(sse2, FORCE_SSE2)
+#endif
+#if defined(WATERSPOUT_SIMD_SSE3)
+    test_functions_for_impl(sse3, FORCE_SSE3)
+#endif
+#if defined(WATERSPOUT_SIMD_SSSE3)
+    test_functions_for_impl(ssse3, FORCE_SSSE3)
+#endif
+#if defined(WATERSPOUT_SIMD_SSE41)
+    test_functions_for_impl(sse41, FORCE_SSE41)
+#endif
+#if defined(WATERSPOUT_SIMD_SSE42)
+    test_functions_for_impl(sse42, FORCE_SSE42)
+#endif
+#if defined(WATERSPOUT_SIMD_AVX)
+    test_functions_for_impl(avx, FORCE_AVX)
+#endif
 
 private:
-
-    math fpu;
-
-    // math test classes
-    #if defined(WATERSPOUT_SIMD_MMX)
-        math mmx;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE)
-        math sse;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE2)
-        math sse2;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE3)
-        math sse3;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSSE3)
-        math ssse3;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE41)
-        math sse41;
-    #endif
-    #if defined(WATERSPOUT_SIMD_SSE42)
-        math sse42;
-    #endif
-    #if defined(WATERSPOUT_SIMD_AVX)
-        math avx;
-    #endif
 
     int buffer_size;
 };

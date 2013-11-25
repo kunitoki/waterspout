@@ -351,7 +351,7 @@ protected:
 //------------------------------------------------------------------------------
 
 template<typename T>
-void check_value_is_equal_(const char* file, int line, T a, T b)
+void test_value_is_equal_(const char* file, int line, T a, T b)
 {
     if (a != b)
     {
@@ -364,7 +364,7 @@ void check_value_is_equal_(const char* file, int line, T a, T b)
 }
 
 template<typename T>
-void check_value_is_not_equal_(const char* file, int line, T a, T b)
+void test_value_is_not_equal_(const char* file, int line, T a, T b)
 {
     if (a == b)
     {
@@ -377,7 +377,7 @@ void check_value_is_not_equal_(const char* file, int line, T a, T b)
 }
 
 template<typename T>
-void check_value_is_less_(const char* file, int line, T a, T b)
+void test_value_is_less_(const char* file, int line, T a, T b)
 {
     if (a < b)
     {
@@ -390,7 +390,7 @@ void check_value_is_less_(const char* file, int line, T a, T b)
 }
 
 template<typename T>
-void check_value_is_more_(const char* file, int line, T a, T b)
+void test_value_is_more_(const char* file, int line, T a, T b)
 {
     if (a < b)
     {
@@ -405,17 +405,17 @@ void check_value_is_more_(const char* file, int line, T a, T b)
 
 //------------------------------------------------------------------------------
 
-#define check_value_is_equal(a, b) \
-    check_value_is_equal_(__FILE__, __LINE__, a, b);
+#define TEST_IS_EQUAL(a, b) \
+    test_value_is_equal_(__FILE__, __LINE__, a, b);
 
-#define check_value_is_not_equal(a, b) \
-    check_value_is_not_equal_(__FILE__, __LINE__, a, b);
+#define TEST_IS_NOT_EQUAL(a, b) \
+    test_value_is_not_equal_(__FILE__, __LINE__, a, b);
 
-#define check_value_is_less(a, b) \
-    check_value_is_less_(__FILE__, __LINE__, a, b);
+#define TEST_IS_LESS(a, b) \
+    test_value_is_less_(__FILE__, __LINE__, a, b);
 
-#define check_value_is_more(a, b) \
-    check_value_is_more_(__FILE__, __LINE__, a, b);
+#define TEST_IS_MORE(a, b) \
+    test_value_is_more_(__FILE__, __LINE__, a, b);
 
 
 //==============================================================================
@@ -423,7 +423,7 @@ void check_value_is_more_(const char* file, int line, T a, T b)
 //------------------------------------------------------------------------------
 
 template<typename T>
-void check_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
+void test_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
 {
     for (uint32 i = 0; i < size; ++i)
     {
@@ -439,13 +439,13 @@ void check_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, 
 }
 
 template<typename T>
-void check_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
+void test_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
 {
-    check_buffer_is_value_(file, line, buffer, size, static_cast<T>(0));
+    test_buffer_is_value_(file, line, buffer, size, static_cast<T>(0));
 }
 
 template<typename T>
-void check_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
+void test_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
 {
     for (uint32 i = 0; i < size; ++i)
     {
@@ -461,7 +461,7 @@ void check_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 siz
 }
 
 template<>
-void check_buffers_are_equal_(const char* file, int line, int8* a, int8* b, uint32 size)
+void test_buffers_are_equal_(const char* file, int line, int8* a, int8* b, uint32 size)
 {
     for (uint32 i = 0; i < size; ++i)
     {
@@ -477,7 +477,7 @@ void check_buffers_are_equal_(const char* file, int line, int8* a, int8* b, uint
 }
 
 template<>
-void check_buffers_are_equal_(const char* file, int line, uint8* a, uint8* b, uint32 size)
+void test_buffers_are_equal_(const char* file, int line, uint8* a, uint8* b, uint32 size)
 {
     for (uint32 i = 0; i < size; ++i)
     {
@@ -495,14 +495,14 @@ void check_buffers_are_equal_(const char* file, int line, uint8* a, uint8* b, ui
 
 //------------------------------------------------------------------------------
 
-#define check_buffer_is_value(buffer, size, value) \
-    check_buffer_is_value_(__FILE__, __LINE__, buffer, size, value);
+#define TEST_BUFFER_IS_VALUE(buffer, size, value) \
+    test_buffer_is_value_(__FILE__, __LINE__, buffer, size, value);
 
-#define check_buffer_is_zero(buffer, size) \
-    check_buffer_is_zero_(__FILE__, __LINE__, buffer, size);
+#define TEST_BUFFER_IS_ZERO(buffer, size) \
+    test_buffer_is_zero_(__FILE__, __LINE__, buffer, size);
 
-#define check_buffers_are_equal(a, b, size) \
-    check_buffers_are_equal_(__FILE__, __LINE__, a, b, size);
+#define TEST_BUFFERS_ARE_EQUAL(a, b, size) \
+    test_buffers_are_equal_(__FILE__, __LINE__, a, b, size);
 
 
 #endif // __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_TESTS_COMMON_H__
