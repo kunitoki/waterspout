@@ -870,6 +870,110 @@ void memory::aligned_free(void* ptr)
 
 //------------------------------------------------------------------------------
 
+#define simd_unroll_head_16(s) \
+    switch (align_bytes >> 4) \
+    { \
+    case 1:  s; \
+    case 2:  s; \
+    case 3:  s; \
+    case 4:  s; \
+    case 5:  s; \
+    case 6:  s; \
+    case 7:  s; \
+    case 8:  s; \
+    case 9:  s; \
+    case 10: s; \
+    case 11: s; \
+    case 12: s; \
+    case 13: s; \
+    case 14: s; \
+    case 15: s; \
+    }
+
+#define simd_unroll_tail_16(s) \
+    switch (size & 15) \
+    { \
+    case 15: s; \
+    case 14: s; \
+    case 13: s; \
+    case 12: s; \
+    case 11: s; \
+    case 10: s; \
+    case 9:  s; \
+    case 8:  s; \
+    case 7:  s; \
+    case 6:  s; \
+    case 5:  s; \
+    case 4:  s; \
+    case 3:  s; \
+    case 2:  s; \
+    case 1:  s; \
+    }
+
+
+//------------------------------------------------------------------------------
+
+#define simd_unroll_head_8(s) \
+    switch (align_bytes >> 3) \
+    { \
+    case 1: s; \
+    case 2: s; \
+    case 3: s; \
+    case 4: s; \
+    case 5: s; \
+    case 6: s; \
+    case 7: s; \
+    }
+
+#define simd_unroll_tail_8(s) \
+    switch (size & 7) \
+    { \
+    case 7: s; \
+    case 6: s; \
+    case 5: s; \
+    case 4: s; \
+    case 3: s; \
+    case 2: s; \
+    case 1: s; \
+    }
+
+
+//------------------------------------------------------------------------------
+
+#define simd_unroll_head_4(s) \
+    switch (align_bytes >> 2) \
+    { \
+    case 1: s; \
+    case 2: s; \
+    case 3: s; \
+    }
+
+#define simd_unroll_tail_4(s) \
+    switch (size & 3) \
+    { \
+    case 3: s; \
+    case 2: s; \
+    case 1: s; \
+    }
+
+
+//------------------------------------------------------------------------------
+
+#define simd_unroll_head_2(s) \
+    switch (align_bytes >> 1) \
+    { \
+    case 1: s; \
+    }
+
+#define simd_unroll_tail_2(s) \
+    switch (size & 1) \
+    { \
+    case 1: s; \
+    }
+
+
+//------------------------------------------------------------------------------
+
 #include "math_fpu.h"
 
 #if defined(WATERSPOUT_SIMD_MMX)

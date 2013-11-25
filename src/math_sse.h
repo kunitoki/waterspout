@@ -35,27 +35,6 @@
 
 //------------------------------------------------------------------------------
 
-#define sse_unroll_head(s) \
-    switch (align_bytes >> 2) \
-    { \
-    case 1: s; \
-    case 2: s; \
-    case 3: s; \
-    }
-
-#define sse_unroll_tail(s) \
-    switch (size & 3) \
-    { \
-    case 3: s; \
-    case 2: s; \
-    case 1: s; \
-    }
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
 struct disable_sse_denormals
 {
     disable_sse_denormals()
@@ -149,7 +128,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *src_buffer++ = 0.0f;
             );
@@ -168,7 +147,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (float*)vector_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *src_buffer++ = 0.0f;
             );
         }
@@ -193,7 +172,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & SSE_ALIGN);
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *src_buffer++ = value;
             );
@@ -213,7 +192,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (float*)vector_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *src_buffer++ = value;
             );
         }
@@ -240,7 +219,7 @@ public:
             const disable_sse_denormals disable_denormals;
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *src_buffer = *src_buffer * gain;
                 undenormalizef(*src_buffer);
@@ -261,7 +240,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (float*)vector_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *src_buffer = *src_buffer * gain;
                 undenormalizef(*src_buffer);
                 ++src_buffer;
@@ -290,7 +269,7 @@ public:
             const disable_sse_denormals disable_denormals;
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *src_buffer = *src_buffer * (float)gain;
                 undenormalizef(*src_buffer);
@@ -311,7 +290,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (float*)vector_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *src_buffer = *src_buffer * (float)gain;
                 undenormalizef(*src_buffer);
                 ++src_buffer;
@@ -339,7 +318,7 @@ public:
             assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *dst_buffer++ = *src_buffer++;
             );
@@ -361,7 +340,7 @@ public:
             src_buffer = (float*)source_vector;
             dst_buffer = (float*)dest_vector;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *dst_buffer++ = *src_buffer++;
             );
         }
@@ -389,7 +368,7 @@ public:
             assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
             );
@@ -415,7 +394,7 @@ public:
             src_buffer_b = (float*)vector_buffer_b;
             dst_buffer = (float*)vector_dst_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
             );
         }
@@ -443,7 +422,7 @@ public:
             assert(size >= SSE_MIN_SIZE);
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
             );
@@ -469,7 +448,7 @@ public:
             src_buffer_b = (float*)vector_buffer_b;
             dst_buffer = (float*)vector_dst_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
             );
         }
@@ -499,7 +478,7 @@ public:
             const disable_sse_denormals disable_denormals;
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
                 undenormalizef(*dst_buffer);
@@ -527,7 +506,7 @@ public:
             src_buffer_b = (float*)vector_buffer_b;
             dst_buffer = (float*)vector_dst_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *dst_buffer = *src_buffer_a++ * *src_buffer_b++;
                 undenormalizef(*dst_buffer);
                 ++dst_buffer;
@@ -559,7 +538,7 @@ public:
             const disable_sse_denormals disable_denormals;
 
             // Copy unaligned head
-            sse_unroll_head(
+            simd_unroll_head_4(
                 --size;
                 *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
                 undenormalizef(*dst_buffer);
@@ -587,7 +566,7 @@ public:
             src_buffer_b = (float*)vector_buffer_b;
             dst_buffer = (float*)vector_dst_buffer;
 
-            sse_unroll_tail(
+            simd_unroll_tail_4(
                 *dst_buffer = *src_buffer_a++ / *src_buffer_b++;
                 undenormalizef(*dst_buffer);
                 ++dst_buffer;

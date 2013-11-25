@@ -35,23 +35,6 @@
 
 //------------------------------------------------------------------------------
 
-#define mmx_unroll_head(s) \
-    switch (align_bytes >> 1) \
-    { \
-    case 1: s; \
-    }
-
-#define mmx_unroll_tail(s) \
-    switch (size & 1) \
-    { \
-    case 1: s; \
-    }
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
 /**
  * Specific MMX math class elaborating on __m64 buffers
  */
@@ -100,7 +83,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & MMX_ALIGN);
 
             // Copy unaligned head
-            mmx_unroll_head(
+            simd_unroll_head_2(
                 --size;
                 *src_buffer++ = int32(0);
             );
@@ -120,7 +103,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (int32*)vector_buffer;
 
-            mmx_unroll_tail(
+            simd_unroll_tail_2(
                 *src_buffer++ = int32(0);
             );
 
@@ -148,7 +131,7 @@ public:
             const ptrdiff_t align_bytes = ((ptrdiff_t)src_buffer & MMX_ALIGN);
 
             // Copy unaligned head
-            mmx_unroll_head(
+            simd_unroll_head_2(
                 --size;
                 *src_buffer++ = value;
             );
@@ -168,7 +151,7 @@ public:
             // Handle any unaligned leftovers
             src_buffer = (int32*)vector_buffer;
 
-            mmx_unroll_tail(
+            simd_unroll_tail_2(
                 *src_buffer++ = value;
             );
 
@@ -197,7 +180,7 @@ public:
             assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
-            mmx_unroll_head(
+            simd_unroll_head_2(
                 --size;
                 *dst_buffer++ = *src_buffer++;
             );
@@ -219,7 +202,7 @@ public:
             src_buffer = (int32*)source_vector;
             dst_buffer = (int32*)dest_vector;
 
-            mmx_unroll_tail(
+            simd_unroll_tail_2(
                 *dst_buffer++ = *src_buffer++;
             );
 
@@ -250,7 +233,7 @@ public:
             assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
-            mmx_unroll_head(
+            simd_unroll_head_2(
                 --size;
                 *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
             );
@@ -276,7 +259,7 @@ public:
             src_buffer_b = (int32*)vector_buffer_b;
             dst_buffer = (int32*)vector_dst_buffer;
 
-            mmx_unroll_tail(
+            simd_unroll_tail_2(
                 *dst_buffer++ = *src_buffer_a++ + *src_buffer_b++;
             );
 
@@ -307,7 +290,7 @@ public:
             assert(size >= MMX_MIN_SIZE);
 
             // Copy unaligned head
-            mmx_unroll_head(
+            simd_unroll_head_2(
                 --size;
                 *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
             );
@@ -333,7 +316,7 @@ public:
             src_buffer_b = (int32*)vector_buffer_b;
             dst_buffer = (int32*)vector_dst_buffer;
 
-            mmx_unroll_tail(
+            simd_unroll_tail_2(
                 *dst_buffer++ = *src_buffer_a++ - *src_buffer_b++;
             );
 
