@@ -350,6 +350,38 @@ protected:
 
 //------------------------------------------------------------------------------
 
+template<typename T> std::string print_var_(T value)
+{
+    std::ostringstream str;
+    str << value;
+    return str.str();
+}
+
+
+//------------------------------------------------------------------------------
+
+template<> std::string print_var_(int8 value)
+{
+    std::ostringstream str;
+    str << (int32)value;
+    return str.str();
+}
+
+
+//------------------------------------------------------------------------------
+
+template<> std::string print_var_(uint8 value)
+{
+    std::ostringstream str;
+    str << (uint32)value;
+    return str.str();
+}
+
+
+//==============================================================================
+
+//------------------------------------------------------------------------------
+
 template<typename T>
 void test_value_is_equal_(const char* file, int line, T a, T b)
 {
@@ -357,11 +389,14 @@ void test_value_is_equal_(const char* file, int line, T a, T b)
     {
         std::ostringstream error;
         error << file << "(" << line << "): " << "Values should be equal..."
-              << " (" << a << "!=" << b << ")" << std::endl;
+              << " (" << print_var_(a) << "!=" << print_var_(b) << ")" << std::endl;
 
         throw test_exception(error.str());
     }
 }
+
+
+//------------------------------------------------------------------------------
 
 template<typename T>
 void test_value_is_not_equal_(const char* file, int line, T a, T b)
@@ -370,11 +405,14 @@ void test_value_is_not_equal_(const char* file, int line, T a, T b)
     {
         std::ostringstream error;
         error << file << "(" << line << "): " << "Values should be not equal..."
-              << " (" << a << "==" << b << ")" << std::endl;
+              << " (" << print_var_(a) << "==" << print_var_(b) << ")" << std::endl;
 
         throw test_exception(error.str());
     }
 }
+
+
+//------------------------------------------------------------------------------
 
 template<typename T>
 void test_value_is_less_(const char* file, int line, T a, T b)
@@ -383,11 +421,14 @@ void test_value_is_less_(const char* file, int line, T a, T b)
     {
         std::ostringstream error;
         error << file << "(" << line << "): " << "Value A should be less than B..."
-              << " (" << a << ">=" << b << ")" << std::endl;
+              << " (" << print_var_(a) << ">=" << print_var_(b) << ")" << std::endl;
 
         throw test_exception(error.str());
     }
 }
+
+
+//------------------------------------------------------------------------------
 
 template<typename T>
 void test_value_is_more_(const char* file, int line, T a, T b)
@@ -396,12 +437,61 @@ void test_value_is_more_(const char* file, int line, T a, T b)
     {
         std::ostringstream error;
         error << file << "(" << line << "): " << "Value A should be more than B..."
-              << " (" << a << "<=" << b << ")" << std::endl;
+              << " (" << print_var_(a) << "<=" << print_var_(b) << ")" << std::endl;
 
         throw test_exception(error.str());
     }
 }
 
+
+//------------------------------------------------------------------------------
+
+template<typename T>
+void test_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
+{
+    for (uint32 i = 0; i < size; ++i)
+    {
+        if (buffer[i] != value)
+        {
+            std::ostringstream error;
+            error << file << "(" << line << "): " << "Buffer is not a specific value..."
+                  << "at index " << i << " (" << print_var_(buffer[i]) << "!=" << print_var_(value) << ")" << std::endl;
+
+            throw test_exception(error.str());
+        }
+    }
+}
+
+
+//------------------------------------------------------------------------------
+
+template<typename T>
+void test_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
+{
+    test_buffer_is_value_(file, line, buffer, size, static_cast<T>(0));
+}
+
+
+//------------------------------------------------------------------------------
+
+template<typename T>
+void test_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
+{
+    for (uint32 i = 0; i < size; ++i)
+    {
+        if (a[i] != b[i])
+        {
+            std::ostringstream error;
+            error << file << "(" << line << "): " << "Buffers are not equals... "
+                  << "at index " << i << " (" << print_var_(a[i]) << "!=" << print_var_(b[i]) << ")" << std::endl;
+
+            throw test_exception(error.str());
+        }
+    }
+}
+
+
+//==============================================================================
 
 //------------------------------------------------------------------------------
 
@@ -416,81 +506,6 @@ void test_value_is_more_(const char* file, int line, T a, T b)
 
 #define TEST_IS_MORE(a, b) \
     test_value_is_more_(__FILE__, __LINE__, a, b);
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-template<typename T>
-void test_buffer_is_value_(const char* file, int line, T* buffer, uint32 size, T value)
-{
-    for (uint32 i = 0; i < size; ++i)
-    {
-        if (buffer[i] != value)
-        {
-            std::ostringstream error;
-            error << file << "(" << line << "): " << "Buffer is not a specific value..."
-                  << "at index " << i << " (" << buffer[i] << "!=" << value << ")" << std::endl;
-
-            throw test_exception(error.str());
-        }
-    }
-}
-
-template<typename T>
-void test_buffer_is_zero_(const char* file, int line, T* buffer, uint32 size)
-{
-    test_buffer_is_value_(file, line, buffer, size, static_cast<T>(0));
-}
-
-template<typename T>
-void test_buffers_are_equal_(const char* file, int line, T* a, T* b, uint32 size)
-{
-    for (uint32 i = 0; i < size; ++i)
-    {
-        if (a[i] != b[i])
-        {
-            std::ostringstream error;
-            error << file << "(" << line << "): " << "Buffers are not equals... "
-                  << "at index " << i << " (" << a[i] << "!=" << b[i] << ")" << std::endl;
-
-            throw test_exception(error.str());
-        }
-    }
-}
-
-template<>
-void test_buffers_are_equal_(const char* file, int line, int8* a, int8* b, uint32 size)
-{
-    for (uint32 i = 0; i < size; ++i)
-    {
-        if (a[i] != b[i])
-        {
-            std::ostringstream error;
-            error << file << "(" << line << "): " << "Buffers are not equals... "
-                  << "at index " << i << " (" << (int32)a[i] << "!=" << (int32)b[i] << ")" << std::endl;
-
-            throw test_exception(error.str());
-        }
-    }
-}
-
-template<>
-void test_buffers_are_equal_(const char* file, int line, uint8* a, uint8* b, uint32 size)
-{
-    for (uint32 i = 0; i < size; ++i)
-    {
-        if (a[i] != b[i])
-        {
-            std::ostringstream error;
-            error << file << "(" << line << "): " << "Buffers are not equals... "
-                  << "at index " << i << " (" << (uint32)a[i] << "!=" << (uint32)b[i] << ")" << std::endl;
-
-            throw test_exception(error.str());
-        }
-    }
-}
 
 
 //------------------------------------------------------------------------------
