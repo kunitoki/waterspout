@@ -301,6 +301,9 @@ public:
 #if defined(WATERSPOUT_SIMD_AVX)
         add_tests_for_impl(avx);
 #endif
+#if defined(WATERSPOUT_SIMD_AVX2)
+        //add_tests_for_impl(avx2);
+#endif
     }
 
     // implementations
@@ -327,6 +330,9 @@ public:
 #endif
 #if defined(WATERSPOUT_SIMD_AVX)
     test_functions_for_impl(avx, FORCE_AVX)
+#endif
+#if defined(WATERSPOUT_SIMD_AVX2)
+    //test_functions_for_impl(avx2, FORCE_AVX2)
 #endif
 
 private:
