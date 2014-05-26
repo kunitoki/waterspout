@@ -75,8 +75,8 @@
     #include <nmmintrin.h> // SSE4.2
 #endif
 
-#if defined(WATERSPOUT_SIMD_AVX)
-    #include <immintrin.h> // AVX
+#if defined(WATERSPOUT_SIMD_AVX) || defined(WATERSPOUT_SIMD_AVX2)
+    #include <immintrin.h> // AVX and AVX2
 #endif
 
 #if defined(WATERSPOUT_SIMD_NEON)
@@ -709,7 +709,8 @@ enum CpuExtendedFeatures
     SSSE3 = 1 <<  9, // SSSE3
     SSE41 = 1 << 19, // SSE41
     SSE42 = 1 << 20, // SSE42
-    AVX   = 1 << 28  // AVX
+    AVX   = 1 << 28, // AVX
+    AVX2  = 1 <<  5  // AVX2
 };
 
 /**
@@ -1008,6 +1009,10 @@ void memory::aligned_free(void* ptr)
     #include "math_avx.h"
 #endif
 
+#if defined(WATERSPOUT_SIMD_AVX2)
+    #include "math_avx2.h"
+#endif
+
 #if defined(WATERSPOUT_SIMD_NEON)
     #include "math_neon.h"
 #endif
@@ -1022,6 +1027,10 @@ math::math(int flags, bool fallback)
 {
     if (! fallback)
     {
+#if ! defined(WATERSPOUT_SIMD_AVX2)
+        if (flags == FORCE_AVX2)
+            throw std::runtime_error("math_factory: AVX2 not available!");
+#endif
 #if ! defined(WATERSPOUT_SIMD_AVX)
         if (flags == FORCE_AVX)
             throw std::runtime_error("math_factory: AVX not available!");
@@ -1074,6 +1083,22 @@ math::math(int flags, bool fallback)
             // placeholder do nothing !
         }
     
+    #if defined(WATERSPOUT_SIMD_AVX2)
+        else if ((features_ext & AVX2)
+            && flags != FORCE_AVX
+            && flags != FORCE_SSE42
+            && flags != FORCE_SSE41
+            && flags != FORCE_SSSE3
+            && flags != FORCE_SSE3
+            && flags != FORCE_SSE2
+            && flags != FORCE_SSE
+            && flags != FORCE_MMX
+            && flags != FORCE_FPU)
+        {
+            math_implementation_ = new math_avx2;
+        }
+    #endif
+
     #if defined(WATERSPOUT_SIMD_AVX)
         else if ((features_ext & AVX)
             && flags != FORCE_SSE42
@@ -1220,6 +1245,10 @@ math::math(int flags, bool fallback)
     #if defined(WATERSPOUT_SIMD_AVX)
         WATERSPOUT_LOG_DEBUG(math_factory)
             << "  AVX   = " << std::boolalpha << (bool)(cpu_extended_features() & AVX);
+    #endif
+    #if defined(WATERSPOUT_SIMD_AVX2)
+        WATERSPOUT_LOG_DEBUG(math_factory)
+            << "  AVX2  = " << std::boolalpha << (bool)(cpu_extended_features() & AVX2);
     #endif
 
     if (math_implementation_ != NULL)

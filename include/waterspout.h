@@ -71,6 +71,10 @@
   #define WATERSPOUT_SIMD_AVX
 #endif
 
+#if defined(__AVX2__)
+  #define WATERSPOUT_SIMD_AVX2
+#endif
+
 
 /**
  * System bits definitions
@@ -398,7 +402,7 @@ public:
     static forcedinline int f2i(float f)
     {
       #if defined(WATERSPOUT_COMPILER_MSVC)
-          __asm cvttss2si eax,f
+          __asm cvttss2si eax, f
 
       #else
           int i;
@@ -729,7 +733,8 @@ enum MathFlags
     FORCE_SSE41 =  7,
     FORCE_SSE42 =  8,
     FORCE_AVX   =  9,
-    FORCE_NEON  = 10
+    FORCE_AVX2  = 10,
+    FORCE_NEON  = 11
 };
 
 

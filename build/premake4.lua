@@ -37,14 +37,14 @@ function setup_solution(projectname, projectkind, platformname)
   elseif platformname == "MacOSX" then
     configurations { "debug", "release" }
   end
-  
+
   -- project
   project(projectname)
   kind(projectkind)
   language "C++"
 
   location(platformname)
-  
+
   -- build/link options
   flags {
     --"EnableSSE",
@@ -86,7 +86,7 @@ function setup_solution(projectname, projectkind, platformname)
   -- global defines
   --defines {
   --}
-  
+
   -- include directories
   includedirs {
     "../include",
@@ -97,6 +97,7 @@ function setup_solution(projectname, projectkind, platformname)
   files {
     "../src/*.h",
     "../src/*.cpp",
+    "../tests/*.h",
     "../tests/*.cpp"
   }
 
@@ -110,11 +111,11 @@ end
 --===========================================================================--
 if _ACTION == "gmake" then
   setup_solution(projectname, projectkind, "Linux")
-  
+
   defines {
     "LINUX=1"
   }
-    
+
   buildoptions {
     "-march=native",
     "-fPIC"
@@ -136,7 +137,7 @@ elseif _ACTION == "vs2010" then
     "/wd4244", -- disable conversion double > float warning
     "/wd4305"  -- disable truncation double > float warning
   }
-  
+
   defines {
     "WIN32=1",
     "_SCL_SECURE_NO_WARNINGS=1",
@@ -146,11 +147,11 @@ elseif _ACTION == "vs2010" then
 
   files {
   }
-  
+
 --===========================================================================--
 elseif _ACTION == "xcode3" then
   setup_solution(projectname, projectkind, "MacOSX")
-  
+
   links {
     "AudioToolbox.framework",
     "AudioUnit.framework",
@@ -167,5 +168,5 @@ elseif _ACTION == "xcode3" then
     "QuickTime.framework",
     "WebKit.framework"
   }
-  
+
 end

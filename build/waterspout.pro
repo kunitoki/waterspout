@@ -13,6 +13,7 @@ OBJECTS_DIR = $$DESTDIR/temp
 HEADERS += \
   $$INCLUDEDIR/waterspout.h \
   $$SRCDIR/math_avx.h \
+  $$SRCDIR/math_avx2.h \
   $$SRCDIR/math_fpu.h \
   $$SRCDIR/math_mmx.h \
   $$SRCDIR/math_neon.h \
@@ -43,7 +44,8 @@ DEFINES += \
   __SSSE3__=1 \
   __SSE4_1__=1 \
   __SSE4_2__=1 \
-  __AVX__=1
+  __AVX__=1 \
+  __AVX2__=1
 
 unix{
   DEFINES += \
