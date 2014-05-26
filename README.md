@@ -3,7 +3,7 @@
 waterspout
 ==========
 
-[![Build Status](https://api.travis-ci.org/kunitoki/waterspout.png)](https://travis-ci.org/kunitoki/waterspout)
+[![Build Status](https://travis-ci.org/kunitoki/waterspout.svg?branch=master)](https://travis-ci.org/kunitoki/waterspout)
 
 Waterspout is a SIMD abstraction library wrapper especially crafted for
 audio/image manipulation.

@@ -843,7 +843,7 @@ void* memory::aligned_alloc(uint32 size_bytes, uint32 alignment_bytes)
 #if defined(WATERSPOUT_COMPILER_MSVC)
     return (void*)::_aligned_malloc(size_bytes, alignment_bytes);
 #elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
-    void* ptr;
+    void* ptr = NULL;
     if (::posix_memalign(&ptr, alignment_bytes, size_bytes) == 0) { /* do nothing */ }
     return ptr;
 #else
