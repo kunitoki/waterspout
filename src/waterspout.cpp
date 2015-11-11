@@ -430,7 +430,7 @@ namespace logger_detail_ {
                 else
                 {
                     std::stringstream s;
-                    s << "logger: cannot redirect log to file " << file_output_;
+                    s << "logger: cannot redirect log to file " << file_name_;
                     throw std::runtime_error(s.str());
                 }
             }

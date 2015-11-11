@@ -43,8 +43,6 @@ function setup_solution(projectname, projectkind, platformname)
   kind(projectkind)
   language "C++"
 
-  -- location(platformname)
-
   -- build/link options
   flags {
     --"EnableSSE",
@@ -118,8 +116,9 @@ if _ACTION == "gmake" then
 
   buildoptions {
     "-march=native",
-    "-std=c++11",
-    "-fPIC"
+    "-std=c++0x",
+    "-fPIC",
+    "-Wno-error"
   }
 
   includedirs {
@@ -143,15 +142,16 @@ elseif _ACTION == "vs2010" then
     "WIN32=1",
     "_SCL_SECURE_NO_WARNINGS=1",
     "_CRT_SECURE_NO_WARNINGS=1",
-    "inline=__inline",
-  }
-
-  files {
+    "inline=__inline"
   }
 
 --===========================================================================--
 elseif _ACTION == "xcode3" then
   setup_solution(projectname, projectkind, "MacOSX")
+
+  buildoptions {
+    "-Wno-error"
+  }
 
   links {
     "AudioToolbox.framework",

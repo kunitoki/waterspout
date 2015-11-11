@@ -39,39 +39,39 @@
  * SIMD intrinsics definitions
  */
 
-#if defined(__MMX__)
+#if defined(__MMX__) || defined(_WIN64) || (_M_IX86_FP >= 1)
   #define WATERSPOUT_SIMD_MMX
 #endif
 
-#if defined(__SSE__)
+#if defined(__SSE__) || defined(_WIN64) || (_M_IX86_FP >= 1)
   #define WATERSPOUT_SIMD_SSE
 #endif
 
-#if defined(__SSE2__)
+#if defined(__SSE2__) || defined(_WIN64) || (_M_IX86_FP >= 2)
   #define WATERSPOUT_SIMD_SSE2
 #endif
 
-#if defined(__SSE3__)
+#if defined(__SSE3__) || (_MSC_VER >= 1400)
   #define WATERSPOUT_SIMD_SSE3
 #endif
 
-#if defined(__SSSE3__)
+#if defined(__SSSE3__) || (_MSC_VER >= 1500)
   #define WATERSPOUT_SIMD_SSSE3
 #endif
 
-#if defined(__SSE4_1__)
+#if defined(__SSE4_1__) || (_MSC_VER >= 1500)
   #define WATERSPOUT_SIMD_SSE41
 #endif
 
-#if defined(__SSE4_2__)
+#if defined(__SSE4_2__) || (_MSC_VER >= 1500)
   #define WATERSPOUT_SIMD_SSE42
 #endif
 
-#if defined(__AVX__)
+#if defined(__AVX__) || (_MSC_VER >= 1700)
   #define WATERSPOUT_SIMD_AVX
 #endif
 
-#if defined(__AVX2__)
+#if defined(__AVX2__) || (_MSC_VER >= 1700)
   #define WATERSPOUT_SIMD_AVX2
 #endif
 
@@ -99,6 +99,13 @@
     #define NOMINMAX
     #include <windows.h>
 
+#elif defined(__APPLE__)
+    #if defined(__MACH__)
+	    // MacOSX
+    	#define WATERSPOUT_SYSTEM_MACOSX 1
+ 		#include <sys/time.h>
+ 	#endif
+
 #elif defined(LINUX) || defined(__linux__)
     #if defined(__ANDROID__)
         // Android
@@ -110,10 +117,6 @@
         #include <sys/time.h> // for gettimeofday() on unix
         #include <sys/resource.h>
    #endif
-
-#elif defined(__APPLE__) && defined(__MACH__)
-    // MacOSX
-    #define WATERSPOUT_SYSTEM_MACOSX 1
 
 #elif defined(sun) || defined(__sun)
     #if defined(__SVR4) || defined(__svr4__)
@@ -165,6 +168,8 @@
  */
 #if defined(__GXX_EXPERIMENTAL_CXX0X__)
     #define WATERSPOUT_SUPPORT_CXX0X
+#else
+ 	#define nullptr NULL
 #endif
 
 
@@ -183,16 +188,33 @@
  * Waterspout global macros helpers by compiler
  */
 
-#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+#if defined(WATERSPOUT_SYSTEM_LINUX) || defined(WATERSPOUT_SYSTEM_SOLARIS) || defined(WATERSPOUT_SYSTEM_BSD)
     #include <stddef.h>
     #include <stdint.h>
-    #include <malloc.h>
+    //#include <malloc.h>
     #include <fenv.h>
 
     #define aligned(type_name, alignment) \
         __attribute__ ((aligned(alignment))) type_name
 
     #define forcedinline inline __attribute__ ((always_inline))
+
+    #define rounding_mode_type \
+        int
+
+    #define original_rounding_mode(var_name) \
+        var_name = fegetround();
+
+    #define round_float_to(mode) \
+        fesetround(mode);
+    #define round_float_to_nearest \
+        fesetround(FE_TONEAREST);
+    #define round_float_to_zero \
+        fesetround(FE_TOWARDZERO);
+    #define round_float_to_up \
+        fesetround(FE_UPWARD);
+    #define round_float_to_down \
+        fesetround(FE_DOWNWARD);
 
     #define enable_floating_point_assertions \
         ::feenableexcept(FE_DIVBYZERO | FE_INVALID | \
@@ -203,25 +225,7 @@
         ::fedisableexcept(FE_ALL_EXCEPT); \
         ::feclearexcept(FE_ALL_EXCEPT);
 
-    #define rounding_mode_type \
-        int
-
-    #define original_rounding_mode(var_name) \
-        var_name = fegetround();
-
-    #define round_float_to(mode) \
-        fesetround(mode);
-
-    #define round_float_to_nearest \
-        fesetround(FE_TONEAREST);
-    #define round_float_to_zero \
-        fesetround(FE_TOWARDZERO);
-    #define round_float_to_up \
-        fesetround(FE_UPWARD);
-    #define round_float_to_down \
-        fesetround(FE_DOWNWARD);
-
-#elif defined(WATERSPOUT_COMPILER_MSVC)
+#elif defined(WATERSPOUT_SYSTEM_WINDOWS)
     #include <stddef.h>
     //#include <stdint.h> // TODO - check _MSC_VER
     #include <intrin.h>
@@ -240,7 +244,6 @@
 
     #define round_float_to(mode) \
         ::_controlfp(mode, _MCW_RC);
-
     #define round_float_to_nearest \
         ::_controlfp(_RC_NEAR, _MCW_RC);
     #define round_float_to_zero \
@@ -264,6 +267,19 @@
 
     #define isnan(value) (::_isnan(value))
     #define isinf(value) (!::_finite(value))
+
+#else
+    #define aligned(type_name, alignment)
+    #define forcedinline inline
+    #define enable_floating_point_assertions
+    #define disable_floating_point_assertions
+    #define rounding_mode_type int
+    #define original_rounding_mode(var_name)
+    #define round_float_to(mode)
+    #define round_float_to_nearest 
+    #define round_float_to_zero
+    #define round_float_to_up
+    #define round_float_to_down
 
 #endif
 

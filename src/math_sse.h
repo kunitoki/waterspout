@@ -54,8 +54,6 @@ struct disable_sse_denormals
         }
         else
         {
-            assert(caps & SSE); // Expected at least sse 1
-
             if ((old_mxcsr_ & 0x8000) == 0) // set DAZ bit...
             {
                 _mm_setcsr(old_mxcsr_ | 0x8000);

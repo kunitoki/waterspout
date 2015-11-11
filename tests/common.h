@@ -3,7 +3,7 @@
  *
  *   - simd abstraction library for audio/image manipulation -
  *
- * Copyright (c) 2013 Lucio Asnaghi
+ * Copyright (c) 2015 Lucio Asnaghi
  *
  *
  * The MIT License (MIT)
