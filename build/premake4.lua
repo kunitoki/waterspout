@@ -43,7 +43,7 @@ function setup_solution(projectname, projectkind, platformname)
   kind(projectkind)
   language "C++"
 
-  location(platformname)
+  -- location(platformname)
 
   -- build/link options
   flags {
