@@ -118,6 +118,7 @@ if _ACTION == "gmake" then
 
   buildoptions {
     "-march=native",
+    "-std=c++11",
     "-fPIC"
   }
 
