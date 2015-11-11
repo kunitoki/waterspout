@@ -13,9 +13,10 @@ environment:
 
 before_build:
 - cd build
-- premake4.exe vs2010 
+- premake4.exe vs2010
+- cd ..
 
 build:
-  project: waterspout.sln
+  project: build\waterspout.sln
   parallel: true
   verbosity: minimal
