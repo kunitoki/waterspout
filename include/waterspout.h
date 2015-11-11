@@ -3,7 +3,7 @@
  *
  *   - simd abstraction library for audio/image manipulation -
  *
- * Copyright (c) 2013 Lucio Asnaghi
+ * Copyright (c) 2015 Lucio Asnaghi
  *
  * 
  * The MIT License (MIT)
@@ -31,6 +31,7 @@
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_H__
 
 #include <cassert>
+#include <float.h>
 
 
 //------------------------------------------------------------------------------
