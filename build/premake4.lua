@@ -45,8 +45,8 @@ function setup_solution(projectname, projectkind, platformname)
 
   -- build/link options
   flags {
-    --"EnableSSE",
-    --"EnableSSE2",
+    "EnableSSE",
+    "EnableSSE2",
     "ExtraWarnings",
     "FatalWarnings",
     "NoImportLib"
@@ -152,11 +152,17 @@ elseif _ACTION == "vs2010" then
 elseif _ACTION == "xcode3" then
   setup_solution(projectname, projectkind, "MacOSX")
 
-  buildoptions {
+  defines {
   	"MACOSX=1",
+  }
+
+  buildoptions {
+  	"-march=native",
+  	"-fPIC",
     "-Wno-error"
   }
 
+  --[[
   links {
     "AudioToolbox.framework",
     "AudioUnit.framework",
@@ -173,5 +179,6 @@ elseif _ACTION == "xcode3" then
     "QuickTime.framework",
     "WebKit.framework"
   }
+  ]]--
 
 end

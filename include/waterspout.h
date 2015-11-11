@@ -39,15 +39,15 @@
  * SIMD intrinsics definitions
  */
 
-#if defined(__MMX__) || defined(_WIN64) || (_M_IX86_FP >= 1)
+#if defined(__MMX__) || (_MSC_VER >= 1400) || defined(_WIN64) || (_M_IX86_FP >= 1)
   #define WATERSPOUT_SIMD_MMX
 #endif
 
-#if defined(__SSE__) || defined(_WIN64) || (_M_IX86_FP >= 1)
+#if defined(__SSE__) || (_MSC_VER >= 1400) || defined(_WIN64) || (_M_IX86_FP >= 1)
   #define WATERSPOUT_SIMD_SSE
 #endif
 
-#if defined(__SSE2__) || defined(_WIN64) || (_M_IX86_FP >= 2)
+#if defined(__SSE2__) || (_MSC_VER >= 1400) || defined(_WIN64) || (_M_IX86_FP >= 2)
   #define WATERSPOUT_SIMD_SSE2
 #endif
 
