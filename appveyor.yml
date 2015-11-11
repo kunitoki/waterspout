@@ -1,0 +1,21 @@
+version: 1.0.2.{build}
+
+configuration:
+- Debug
+- Release
+
+environment:
+  matrix:
+  - VS_VERSION: 10
+    VS_PLATFORM: win32
+  - VS_VERSION: 10
+    VS_PLATFORM: x64
+
+before_build:
+- cd build
+- premake4 vs2010 
+
+build:
+  project: build\waterspout.sln
+  parallel: true
+  verbosity: minimal
