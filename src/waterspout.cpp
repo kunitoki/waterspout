@@ -43,6 +43,12 @@
 #include <map>
 
 
+#ifdef _MSC_VER
+	#pragma warning(push)
+	#pragma warning(disable: 2200)
+#endif
+
+
 #if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
     #include <cpuid.h>
 #endif
@@ -1284,3 +1290,8 @@ const char* math::name() const
 
 
 } // end namespace
+
+
+#ifdef _MSC_VER
+	#pragma warning(pop)
+#endif
