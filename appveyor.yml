@@ -16,6 +16,6 @@ before_build:
 - premake4.exe vs2010 
 
 build:
-  project: build\waterspout.sln
+  project: waterspout.sln
   parallel: true
   verbosity: minimal
