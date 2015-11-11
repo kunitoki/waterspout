@@ -134,6 +134,11 @@ elseif _ACTION == "vs2010" then
   setup_solution(projectname, projectkind, "Windows")
 
   buildoptions {
+  	"/Wd4127",
+  	"/Wd4146",
+  	"/Wd4244",
+  	"/Wd4305",
+  	"/Wd4310"
   }
 
   defines {
