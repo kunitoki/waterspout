@@ -20,3 +20,9 @@ build:
   project: build\waterspout.sln
   parallel: true
   verbosity: minimal
+
+test_script:
+- if exist bin\Windows\debug32\waterspout.exe bin\Windows\debug32\waterspout.exe
+- if exist bin\Windows\release32\waterspout.exe bin\Windows\release32\waterspout.exe
+- if exist bin\Windows\debug64\waterspout.exe bin\Windows\debug64\waterspout.exe
+- if exist bin\Windows\release64\waterspout.exe bin\Windows\release64\waterspout.exe
