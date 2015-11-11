@@ -244,7 +244,7 @@ template <typename T,
     static void destroy_singleton()
     {
         create_policy<T>::destroy(ptr_instance_);
-        ptr_instance_ = 0;
+        ptr_instance_ = nullptr;
         destroyed_ = true;
     }
 
@@ -278,7 +278,7 @@ public:
 
 template <typename T,
           template <typename U> class create_policy>
-T* singleton<T, create_policy>::ptr_instance_ = NULL;
+T* singleton<T, create_policy>::ptr_instance_ = nullptr;
 
 template <typename T,
           template <typename U> class create_policy>
@@ -385,7 +385,7 @@ namespace logger_detail_ {
                 logger::format_env_check_ = false;
 
                 const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
-                if (log_format != NULL)
+                if (log_format != nullptr)
                 {
                     logger::format_ = log_format;
                 }
@@ -401,7 +401,7 @@ namespace logger_detail_ {
         static void use_file(std::string const& filepath)
         {
             // save clog rdbuf
-            if (saved_buf_ == 0)
+            if (saved_buf_ == nullptr)
             {
                 saved_buf_ = std::clog.rdbuf();
             }
@@ -433,7 +433,7 @@ namespace logger_detail_ {
         static void use_console()
         {
             // save clog rdbuf
-            if (saved_buf_ == 0)
+            if (saved_buf_ == nullptr)
             {
                 saved_buf_ = std::clog.rdbuf();
             }
@@ -530,7 +530,7 @@ namespace logger_detail_ {
         base_log(const char* object_name)
         {
 #if !defined(WATERSPOUT_VOID_LOGGING)
-            if (object_name != NULL)
+            if (object_name != nullptr)
             {
                 object_name_ = object_name;
             }
@@ -589,7 +589,7 @@ namespace logger_detail_ {
 
         base_log_always(const char* object_name)
         {
-            if (object_name != NULL)
+            if (object_name != nullptr)
             {
                 object_name_ = object_name;
             }
@@ -845,7 +845,7 @@ void* memory::aligned_alloc(uint32 size_bytes, uint32 alignment_bytes)
 #if defined(WATERSPOUT_COMPILER_MSVC)
     return (void*)::_aligned_malloc(size_bytes, alignment_bytes);
 #elif defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
-    void* ptr = NULL;
+    void* ptr = nullptr;
     if (::posix_memalign(&ptr, alignment_bytes, size_bytes) == 0) { /* do nothing */ }
     return ptr;
 #else
@@ -1024,7 +1024,7 @@ void memory::aligned_free(void* ptr)
 //------------------------------------------------------------------------------
 
 math::math(int flags, bool fallback)
-  : math_implementation_(NULL)
+  : math_implementation_(nullptr)
 {
     if (! fallback)
     {
@@ -1079,11 +1079,12 @@ math::math(int flags, bool fallback)
         static uint32 features = cpu_features();
         static uint32 features_ext = cpu_extended_features();
 
-        if (0)
+        bool placeholder = false;
+        if (placeholder)
         {
-            // placeholder do nothing !
+        	placeholder = false;
         }
-    
+
     #if defined(WATERSPOUT_SIMD_AVX2)
         else if ((features_ext & AVX2)
             && flags != FORCE_AVX
@@ -1098,10 +1099,9 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_avx2;
         }
-    #endif
 
-    #if defined(WATERSPOUT_SIMD_AVX)
-        else if ((features_ext & AVX)
+    #elif defined(WATERSPOUT_SIMD_AVX)
+        if ((features_ext & AVX)
             && flags != FORCE_SSE42
             && flags != FORCE_SSE41
             && flags != FORCE_SSSE3
@@ -1113,10 +1113,9 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_avx;
         }
-    #endif
 
-    #if defined(WATERSPOUT_SIMD_SSE42)
-        else if ((features_ext & SSE42)
+    #elif defined(WATERSPOUT_SIMD_SSE42)
+        if ((features_ext & SSE42)
             && flags != FORCE_SSE41
             && flags != FORCE_SSSE3
             && flags != FORCE_SSE3
@@ -1127,7 +1126,6 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_sse42;
         }
-    #endif
 
     #if defined(WATERSPOUT_SIMD_SSE41)
         else if ((features_ext & SSE41)
@@ -1252,7 +1250,7 @@ math::math(int flags, bool fallback)
             << "  AVX2  = " << std::boolalpha << (bool)(cpu_extended_features() & AVX2);
     #endif
 
-    if (math_implementation_ != NULL)
+    if (math_implementation_ != nullptr)
     {
         WATERSPOUT_LOG_DEBUG(math_factory)
             << "Enabled " << math_implementation_->name() << " instructions";
@@ -1272,7 +1270,7 @@ math::~math()
 
 const char* math::name() const
 {
-    if (math_implementation_ != NULL)
+    if (math_implementation_ != nullptr)
     {
         return math_implementation_->name();
     }

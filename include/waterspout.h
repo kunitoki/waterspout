@@ -430,7 +430,7 @@ class scoped_ptr
 {
 public:
     explicit scoped_ptr()
-        : object_ptr_(NULL)
+        : object_ptr_(nullptr)
     {
     }
 
@@ -442,12 +442,12 @@ public:
     scoped_ptr(const scoped_ptr<T>& other)
     {
         object_ptr_ = other.object_ptr_;
-        const_cast< scoped_ptr<T>& >(other).object_ptr_ = NULL;
+        const_cast< scoped_ptr<T>& >(other).object_ptr_ = nullptr;
     }
 
     ~scoped_ptr()
     {
-        if (object_ptr_ != NULL)
+        if (object_ptr_ != nullptr)
         {
             delete object_ptr_;
         }
@@ -475,10 +475,10 @@ public:
 
     forcedinline void operator=(T* object_ptr)
     {
-        if (object_ptr_ != NULL)
+        if (object_ptr_ != nullptr)
         {
             delete object_ptr_;
-            object_ptr_ = NULL;
+            object_ptr_ = nullptr;
         }
 
         object_ptr_ = object_ptr;
@@ -487,7 +487,7 @@ public:
     forcedinline const scoped_ptr<T>& operator=(const scoped_ptr<T>& other)
     {
         object_ptr_ = other.object_ptr_;
-        const_cast< scoped_ptr<T>& >(other).object_ptr_ = NULL;
+        const_cast< scoped_ptr<T>& >(other).object_ptr_ = nullptr;
         return *this;
     }
 
@@ -533,13 +533,13 @@ class aligned_buffer
 {
 public:
     aligned_buffer()
-      : data_(NULL),
+      : data_(nullptr),
         size_(0)
     {
     }
 
     aligned_buffer(uint32 size)
-      : data_(NULL),
+      : data_(nullptr),
         size_(0)
     {
         allocate(size);
@@ -557,7 +557,7 @@ public:
 
     forcedinline T& operator[](uint32 index)
     {
-        assert(data_ != NULL);
+        assert(data_ != nullptr);
         assert(index < size_);
 
         return data_[index];
@@ -565,7 +565,7 @@ public:
     
     forcedinline const T& operator[](uint32 index) const
     {
-        assert(data_ != NULL);
+        assert(data_ != nullptr);
         assert(index < size_);
 
         return data_[index];
@@ -597,10 +597,10 @@ private:
 
     void deallocate()
     {
-        if (data_ != NULL)
+        if (data_ != nullptr)
         {
             memory::aligned_free(data_);
-            data_ = NULL;
+            data_ = nullptr;
             size_ = 0;
         }
     }
