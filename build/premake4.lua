@@ -134,8 +134,6 @@ elseif _ACTION == "vs2010" then
   setup_solution(projectname, projectkind, "Windows")
 
   buildoptions {
-    "/wd4244", -- disable conversion double > float warning
-    "/wd4305"  -- disable truncation double > float warning
   }
 
   defines {
@@ -150,6 +148,7 @@ elseif _ACTION == "xcode3" then
   setup_solution(projectname, projectkind, "MacOSX")
 
   buildoptions {
+  	"MACOSX=1",
     "-Wno-error"
   }
 
