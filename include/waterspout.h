@@ -31,7 +31,6 @@
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_H__
 
 #include <cassert>
-#include <float.h>
 
 
 //------------------------------------------------------------------------------
@@ -222,9 +221,6 @@
     #define round_float_to_down \
         fesetround(FE_DOWNWARD);
 
-    //#define isnan(value) isnan(value) // already defined by gcc !
-    //#define isinf(value) isinf(value) // already defined by gcc ! 
-
 #elif defined(WATERSPOUT_COMPILER_MSVC)
     #include <stddef.h>
     //#include <stdint.h> // TODO - check _MSC_VER
@@ -240,19 +236,19 @@
         unsigned int
 
     #define original_rounding_mode(var_name) \
-        var_name = _control_fp(0, 0);
+        var_name = ::_controlfp(0, 0);
 
     #define round_float_to(mode) \
-        _control_fp(mode, _MCW_RC);
+        ::_controlfp(mode, _MCW_RC);
 
     #define round_float_to_nearest \
-        _control_fp(_RC_NEAR, _MCW_RC);
+        ::_controlfp(_RC_NEAR, _MCW_RC);
     #define round_float_to_zero \
-        _control_fp(_RC_CHOP, _MCW_RC);
+        ::_controlfp(_RC_CHOP, _MCW_RC);
     #define round_float_to_up \
-        _control_fp(_RC_UP, _MCW_RC);
+        ::_controlfp(_RC_UP, _MCW_RC);
     #define round_float_to_down \
-        _control_fp(_RC_DOWN, _MCW_RC);
+        ::_controlfp(_RC_DOWN, _MCW_RC);
 
     #define enable_floating_point_assertions \
         ::_clearfp(); \
