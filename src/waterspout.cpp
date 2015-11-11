@@ -1082,6 +1082,7 @@ math::math(int flags, bool fallback)
         bool placeholder = false;
         if (placeholder)
         {
+        	// this must be here for VS to not complain !
         	placeholder = false;
         }
 
@@ -1099,9 +1100,10 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_avx2;
         }
+    #endif
 
-    #elif defined(WATERSPOUT_SIMD_AVX)
-        if ((features_ext & AVX)
+    #if defined(WATERSPOUT_SIMD_AVX)
+        else if ((features_ext & AVX)
             && flags != FORCE_SSE42
             && flags != FORCE_SSE41
             && flags != FORCE_SSSE3
@@ -1113,9 +1115,10 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_avx;
         }
+    #endif
 
-    #elif defined(WATERSPOUT_SIMD_SSE42)
-        if ((features_ext & SSE42)
+    #if defined(WATERSPOUT_SIMD_SSE42)
+        else if ((features_ext & SSE42)
             && flags != FORCE_SSE41
             && flags != FORCE_SSSE3
             && flags != FORCE_SSE3
@@ -1126,6 +1129,7 @@ math::math(int flags, bool fallback)
         {
             math_implementation_ = new math_sse42;
         }
+    #endif
 
     #if defined(WATERSPOUT_SIMD_SSE41)
         else if ((features_ext & SSE41)
