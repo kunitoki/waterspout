@@ -43,9 +43,9 @@
 #include <map>
 
 
-#ifdef _MSC_VER
+#if defined(WATERSPOUT_COMPILER_MSVC)
 	#pragma warning(push)
-	#pragma warning(disable: 4146 4127)
+	#pragma warning(disable: 4127 4146 4305 4244)
 #endif
 
 
@@ -1292,6 +1292,6 @@ const char* math::name() const
 } // end namespace
 
 
-#ifdef _MSC_VER
+#if defined(WATERSPOUT_COMPILER_MSVC)
 	#pragma warning(pop)
 #endif
