@@ -31,6 +31,7 @@
 #define __WATERSPOUT_SIMD_ABSTRACTION_FRAMEWORK_H__
 
 #include <cassert>
+#include <memory>
 
 
 //------------------------------------------------------------------------------
@@ -118,15 +119,6 @@
         #include <sys/resource.h>
    #endif
 
-#elif defined(sun) || defined(__sun)
-    #if defined(__SVR4) || defined(__svr4__)
-        // Solaris
-        #define WATERSPOUT_SYSTEM_SOLARIS 1
-    #else
-        // SunOS
-        #define WATERSPOUT_SYSTEM_SUNOS 1
-    #endif
-
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
     // BSD
     #define WATERSPOUT_SYSTEM_BSD 1
@@ -153,9 +145,6 @@
 
 #elif defined(__INTEL_COMPILER)
     #define WATERSPOUT_COMPILER_INTEL 1
-
-#elif defined(__SUNPRO_CC)
-    #define WATERSPOUT_COMPILER_SUN 1
 
 #else
     #error "Unknown compiler: this compiler is not supported !"
@@ -445,85 +434,6 @@ public:
 //------------------------------------------------------------------------------
 
 /**
- * Scoped ptr
- */
-
-template<class T>
-class scoped_ptr
-{
-public:
-    explicit scoped_ptr()
-        : object_ptr_(nullptr)
-    {
-    }
-
-    scoped_ptr(T* object_ptr)
-        : object_ptr_(object_ptr)
-    {
-    }
-
-    scoped_ptr(const scoped_ptr<T>& other)
-    {
-        object_ptr_ = other.object_ptr_;
-        const_cast< scoped_ptr<T>& >(other).object_ptr_ = nullptr;
-    }
-
-    ~scoped_ptr()
-    {
-        if (object_ptr_ != nullptr)
-        {
-            delete object_ptr_;
-        }
-    }
-
-    forcedinline T* get() const
-    {
-        return object_ptr_;
-    }
-
-    forcedinline T* operator->() const
-    {
-        return object_ptr_;
-    }
-
-    forcedinline bool operator==(void* object_ptr) const
-    {
-        return object_ptr_ == object_ptr;
-    }
-
-    forcedinline bool operator!=(void* object_ptr) const
-    {
-        return object_ptr_ != object_ptr;
-    }
-
-    forcedinline void operator=(T* object_ptr)
-    {
-        if (object_ptr_ != nullptr)
-        {
-            delete object_ptr_;
-            object_ptr_ = nullptr;
-        }
-
-        object_ptr_ = object_ptr;
-    }
-
-    forcedinline const scoped_ptr<T>& operator=(const scoped_ptr<T>& other)
-    {
-        object_ptr_ = other.object_ptr_;
-        const_cast< scoped_ptr<T>& >(other).object_ptr_ = nullptr;
-        return *this;
-    }
-
-private:
-    T* object_ptr_;
-};
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
  * @brief The memory class
  */
 
@@ -785,7 +695,7 @@ public:
     }
 
 private:
-    scoped_ptr<math_interface_> math_implementation_;
+    std::unique_ptr<math_interface_> math_implementation_;
 
     // noncopyable
     math(const math&);

@@ -33,6 +33,7 @@
 #include <waterspout.h>
 
 #include <ctime>
+#include <memory>
 #include <typeinfo>
 #include <iostream>
 #include <sstream>
@@ -249,7 +250,7 @@ public:
     {
         names_.push_back(name);
         tests_.push_back(fn);
-        status_.push_back(new test_run_status);
+        status_.push_back(std::unique_ptr<test_run_status>(new test_run_status));
     }
 
     void clear_run_status()
@@ -342,7 +343,7 @@ protected:
 
     std::vector< test_function > tests_;
     std::vector< std::string > names_;
-    std::vector< scoped_ptr<test_run_status> > status_;
+    std::vector< std::unique_ptr<test_run_status> > status_;
 };
 
 

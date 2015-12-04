@@ -1084,7 +1084,7 @@ math::math(int flags, bool fallback)
          (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) ||
          (flags == FORCE_NEON))
     {
-        math_implementation_ = new math_neon;
+        math_implementation_ = std::unique_ptr<math_interface_>(new math_neon);
     }
 
 #else
@@ -1111,7 +1111,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_avx2;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_avx2);
         }
     #endif
 
@@ -1126,7 +1126,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_avx;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_avx);
         }
     #endif
 
@@ -1140,7 +1140,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_sse42;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_sse42);
         }
     #endif
 
@@ -1153,7 +1153,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_sse41;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_sse41);
         }
     #endif
 
@@ -1165,7 +1165,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_ssse3;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_ssse3);
         }
     #endif
 
@@ -1176,7 +1176,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_sse3;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_sse3);
         }
     #endif
 
@@ -1186,7 +1186,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_sse2;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_sse2);
         }
     #endif
 
@@ -1195,7 +1195,7 @@ math::math(int flags, bool fallback)
             && flags != FORCE_MMX
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_sse;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_sse);
         }
     #endif
 
@@ -1203,13 +1203,13 @@ math::math(int flags, bool fallback)
         else if ((features & MMX)
             && flags != FORCE_FPU)
         {
-            math_implementation_ = new math_mmx;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_mmx);
         }
     #endif
 
         else // if ((features & FPU) || flags == FORCE_FPU)
         {
-            math_implementation_ = new math_fpu;
+            math_implementation_ = std::unique_ptr<math_interface_>(new math_fpu);
         }
     }
 #endif
