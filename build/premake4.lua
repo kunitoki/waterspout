@@ -118,7 +118,7 @@ if _ACTION == "gmake" then
 
   buildoptions {
     "-march=native",
-    "-std=c++11", -- should be -std=c++11 (this is needed as we build for old gcc in travis)
+    "-std=c++0x", -- should be -std=c++11 (this is needed as we build for old gcc in travis)
     "-fPIC",
     "-Wno-error"
   }
