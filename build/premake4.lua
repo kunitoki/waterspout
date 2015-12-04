@@ -132,7 +132,7 @@ if _ACTION == "gmake" then
   }
 
 --===========================================================================--
-elseif _ACTION == "vs2013" then
+elseif _ACTION == "vs2010" then
   setup_solution(projectname, projectkind, "Windows")
 
   buildoptions {

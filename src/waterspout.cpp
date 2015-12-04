@@ -149,7 +149,7 @@ namespace waterspout {
 #endif
 
 #ifndef WATERSPOUT_LOG_LOCALE
-  #define WATERSPOUT_LOG_LOCALE  en_US.UTF-8
+  #define WATERSPOUT_LOG_LOCALE  C.UTF-8
 #endif
 
 #ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
@@ -203,7 +203,7 @@ namespace logger_detail_ {
 		        #endif
 		    ;
 
-		    object_severity_level_ = logger::severity_map();
+		    object_severity_level_ = severity_map();
 
 		    #define __xstr__(s) __str__(s)
 		    #define __str__(s) #s
@@ -315,7 +315,11 @@ namespace logger_detail_ {
             std::tm tm = *std::localtime(&t);
 
             std::stringstream ss;
-            ss.imbue(std::locale(locale_.c_str()));
+            try {
+	            ss.imbue(std::locale(locale_.c_str()));
+	        } catch (std::runtime_error& e) {
+	            ss.imbue(std::locale(""));
+	        }
             ss << std::put_time(&tm, format_.c_str());
             return ss.str();
         }
