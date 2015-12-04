@@ -1,25 +1,32 @@
-sudo: false
 language: cpp
-compiler:
-  - gcc
-  - clang
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - gcc-4.8
-    - g++-4.8
-    - clang-3.4
-    - lib32stdc++6
-    - libc6-dev-i386
+
+sudo: false
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+          - ubuntu-toolchain-r-test
+          packages:
+          - g++-4.8
+          - lib32stdc++6
+          - libc6-dev-i386
+      env: COMPILER=g++-4.8
+
+    - os: linux
+      compiler: clang
+      env: COMPILER=clang++
+
 before_script:
   - cd ./build/
   - chmod 755 premake4.lnx
   - ./premake4.lnx gmake
   - $CXX --version
+
 script:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
   - make config=debug32 && ../bin/Linux/debug32/waterspout
   - make config=release32 && ../bin/Linux/release32/waterspout
   - make config=debug64 && ../bin/Linux/debug64/waterspout
