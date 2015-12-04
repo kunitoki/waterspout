@@ -1,15 +1,14 @@
 version: x.{build}
 
+os: Visual Studio 2015
+
+platform:
+- Win32
+- x64
+
 configuration:
 - debug
 - release
-
-environment:
-  matrix:
-  - VS_VERSION: 12
-    VS_PLATFORM: win32
-  - VS_VERSION: 12
-    VS_PLATFORM: x64
 
 before_build:
 - cd build
