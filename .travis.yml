@@ -11,7 +11,7 @@ addons:
     - g++-4.8
     - clang-3.4
 before_install:
-  - sudo add-apt-repository ppa:codegera/release -y
+  - sudo add-apt-repository ppa:codegear/release -y
   - sudo apt-get update -qq
 install:
   - sudo apt-get install -qq premake4 lib32stdc++6 libc6-dev-i386
