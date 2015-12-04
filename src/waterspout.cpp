@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <memory>
 #include <mutex>
+#include <atomic>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
