@@ -6,9 +6,9 @@ configuration:
 
 environment:
   matrix:
-  - VS_VERSION: 13
+  - VS_VERSION: 12
     VS_PLATFORM: win32
-  - VS_VERSION: 13
+  - VS_VERSION: 12
     VS_PLATFORM: x64
 
 before_build:
