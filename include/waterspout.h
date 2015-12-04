@@ -141,6 +141,8 @@
         #define WATERSPOUT_COMPILER_CLANG 1
     #else
         #define WATERSPOUT_COMPILER_GCC 1
+		#define WATERSPOUT_COMPILER_GCC_VERSION \
+ 			(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
     #endif
 
 #elif defined(__INTEL_COMPILER)

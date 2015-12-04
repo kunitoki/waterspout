@@ -313,6 +313,11 @@ namespace logger_detail_ {
             }
 
             const time_t t = std::time(nullptr);
+#if defined(WATERSPOUT_COMPILER_GCC) && WATERSPOUT_COMPILER_GCC_VERSION < 40900
+            char buf[256];
+            ::strftime(buf, sizeof(buf), format_.c_str(), std::localtime(&tm));
+            return buf;
+#else
             std::tm tm = *std::localtime(&t);
 
             std::stringstream ss;
@@ -323,6 +328,7 @@ namespace logger_detail_ {
 	        }
             ss << std::put_time(&tm, format_.c_str());
             return ss.str();
+#endif
         }
 
         // output
