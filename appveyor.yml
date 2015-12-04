@@ -18,7 +18,7 @@ before_build:
 - cd ..
 
 build:
-  project: build\waterspout.sln
+  project: build\waterspout.vcxproj
   parallel: true
   verbosity: minimal
 
