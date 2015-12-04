@@ -12,17 +12,10 @@ addons:
     - clang-3.4
     - lib32stdc++6
     - libc6-dev-i386
-before_install:
-  - sudo add-apt-repository ppa:codegear/release -y
-  - sudo apt-get update -qq
-install:
-  - sudo apt-get install -qq premake4
-  - sudo ln -s /usr/lib32/libstdc++.so.6 /usr/lib32/libstdc++.so
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
-  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4" CC="clang-3.4"; fi
 before_script:
   - cd ./build/
-  - premake4 gmake
+  - chmod 755 premake4.lnx
+  - ./premake4.lnx gmake
   - $CXX --version
 script:
   - make config=debug32 && ../bin/Linux/debug32/waterspout
