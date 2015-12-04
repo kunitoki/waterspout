@@ -1,6 +1,6 @@
 language: cpp
 
-sudo: false
+sudo: required
 
 git:
   depth: 1
@@ -10,22 +10,25 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-      addons:
-        apt:
-          sources:
-          - ubuntu-toolchain-r-test
-          packages:
-          - g++-4.8-multilib
-          - lib32stdc++6
-          - libc6-dev-i386
-      env: COMPILER=g++-4.8
+      env: COMPILER=gcc++-4.8
 
     - os: linux
       compiler: clang
       env: COMPILER=clang++
 
+    - os: osx
+      compiler: clang
+      env: COMPILER=clang++
+
+install:
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update -qq; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq g++-4.8-multilib lib32stdc++6 libc6-dev-i386; export CXX="g++-4.8" CC="gcc-4.8"; fi
+
 before_script:
   - cd ./build/
+  - ls
   - chmod 755 premake4.lnx
   - ./premake4.lnx gmake
 
