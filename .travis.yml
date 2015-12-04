@@ -2,6 +2,10 @@ language: cpp
 
 sudo: false
 
+git:
+  depth: 1
+  submodules: true
+
 matrix:
   include:
     - os: linux
@@ -11,7 +15,7 @@ matrix:
           sources:
           - ubuntu-toolchain-r-test
           packages:
-          - g++-4.8
+          - g++-4.8-multilib
           - lib32stdc++6
           - libc6-dev-i386
       env: COMPILER=g++-4.8
