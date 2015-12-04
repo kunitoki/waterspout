@@ -10,7 +10,7 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-      env: COMPILER=gcc++-4.8
+      env: COMPILER=gcc++-4.9
 
     - os: linux
       compiler: clang
@@ -24,7 +24,7 @@ install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update; fi
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update -qq; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq g++-4.8-multilib lib32stdc++6 libc6-dev-i386; export CXX="g++-4.8" CC="gcc-4.8"; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq g++-4.9-multilib lib32stdc++6 libc6-dev-i386; fi
 
 before_script:
   - cd ./build/
@@ -33,8 +33,9 @@ before_script:
   - ./premake4.lnx gmake
 
 script:
-  - if [ "$COMPILER" = "g++-4.8" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+  - if [ "$COMPILER" = "g++-4.9" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
   - if [ "$COMPILER" = "clang++" ]; then export CXX="clang++" CC="clang"; fi
+  - $CXX --version
   - make config=debug32 && ../bin/Linux/debug32/waterspout
   - make config=release32 && ../bin/Linux/release32/waterspout
   - make config=debug64 && ../bin/Linux/debug64/waterspout
