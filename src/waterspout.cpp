@@ -1037,7 +1037,6 @@ void memory::aligned_free(void* ptr)
 //------------------------------------------------------------------------------
 
 math::math(int flags, bool fallback)
-  : math_implementation_(nullptr)
 {
     if (! fallback)
     {
