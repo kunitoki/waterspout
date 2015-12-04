@@ -3,16 +3,19 @@ compiler:
   - gcc
   - clang
 before_install:
-  - sudo add-apt-repository -y ppa:codegear/release
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - if [ "$CXX" == "g++" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
+  - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm; fi
   - sudo apt-get update -qq
-  - sudo apt-get install -qq premake4 build-essential gcc-multilib lib32stdc++6 libc6-dev-i386
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+install:
+  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8-multilib lib32stdc++6 libc6-dev-i386; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
+  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
   - sudo ln -s /usr/lib32/libstdc++.so.6 /usr/lib32/libstdc++.so
 before_script:
   - cd ./build/
   - premake4 gmake
+  - $CXX --version
 script:
   - make config=debug32 && ../bin/Linux/debug32/waterspout
   - make config=release32 && ../bin/Linux/release32/waterspout
