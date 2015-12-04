@@ -316,7 +316,7 @@ namespace logger_detail_ {
             const time_t t = std::time(nullptr);
 #if defined(WATERSPOUT_SYSTEM_LINUX) && defined(WATERSPOUT_COMPILER_GCC) && WATERSPOUT_COMPILER_GCC_VERSION < 50000
             char buf[256];
-            ::strftime(buf, sizeof(buf), format_.c_str(), std::localtime(&tm));
+            ::strftime(buf, sizeof(buf), format_.c_str(), std::localtime(&t));
             return buf;
 #else
             std::tm tm = *std::localtime(&t);
