@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2015 Lucio Asnaghi
  *
- * 
+ *
  * The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -32,13 +32,12 @@
 #include <cstring>
 #include <ctime>
 #include <stdexcept>
-
 #include <memory>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <ostream>
 #include <fstream>
-
 #include <string>
 #include <map>
 
@@ -144,25 +143,6 @@ namespace waterspout {
 //------------------------------------------------------------------------------
 
 /**
- * Helper class to disallow copying classes
- */
-
-class noncopyable
-{
-protected:
-    noncopyable() {}
-    ~noncopyable() {}
-private:
-    noncopyable(const noncopyable&);
-    const noncopyable& operator=(const noncopyable&);
-};
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
-/**
  * Singleton class
  */
 
@@ -207,12 +187,7 @@ public:
         return new(&static_memory) T;
     }
 
-#if defined(WATERSPOUT_COMPILER_SUN)
-    // Sun C++ Compiler doesn't handle `volatile` keyword same as GCC.
-    static void destroy(T* obj)
-#else
     static void destroy(volatile T* obj)
-#endif
     {
         obj->~T();
     }
@@ -221,14 +196,7 @@ public:
 template <typename T,
           template <typename U> class create_policy=create_static_> class singleton
 {
-#if defined(WATERSPOUT_COMPILER_SUN)
-    // Sun's C++ compiler will issue the following errors if create_policy<T> is used:
-    // Error: A class template name was expected instead of waterspout::create_policy<waterspout::T>
-    // Error: A "friend" declaration must specify a class or function.
-    friend class create_policy;
-#else
     friend class create_policy<T>;
-#endif
 
     static T* ptr_instance_;
     static bool destroyed_;
@@ -294,6 +262,10 @@ bool singleton<T, create_policy>::destroyed_ = false;
   #define WATERSPOUT_LOG_FORMAT  Waterspout LOG>
 #endif
 
+#ifndef WATERSPOUT_LOG_LOCALE
+  #define WATERSPOUT_LOG_LOCALE  en_US.utf8
+#endif
+
 #ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
   #ifdef WATERSPOUT_DEBUG
     #define WATERSPOUT_DEFAULT_LOG_SEVERITY 0
@@ -311,8 +283,7 @@ namespace logger_detail_ {
      * The main logger class
      */
     class logger :
-        public singleton<logger>,
-        private noncopyable
+        public singleton<logger>
     {
     public:
         enum severity_type
@@ -376,25 +347,59 @@ namespace logger_detail_ {
             format_ = format;
         }
 
+        // locale
+        static std::string get_locale()
+        {
+            return locale_;
+        }
+
+        static void set_locale(std::string const& locale)
+        {
+            locale_ = locale;
+        }
+
         // interpolate the format string for output
         static std::string str()
         {
-            // update the format from getenv if this is the first time
-            if (logger::format_env_check_)
+            // update the variables from getenv if this is the first time
+            if (logger::env_check_)
             {
-                logger::format_env_check_ = false;
+                logger::env_check_ = false;
 
                 const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
                 if (log_format != nullptr)
                 {
                     logger::format_ = log_format;
                 }
+
+                const char* log_locale = getenv("WATERSPOUT_LOG_LOCALE");
+                if (log_locale != nullptr)
+                {
+                    logger::locale_ = log_locale;
+                }
+
+                const char* log_severity = getenv("WATERSPOUT_LOG_SEVERITY");
+                if (log_severity != nullptr)
+                {
+                	switch (std::atoi(log_severity)) {
+                		case 0: logger::severity_level_ = logger::debug; break;
+                		case 1: logger::severity_level_ = logger::warn; break;
+                		case 2: logger::severity_level_ = logger::error; break;
+                		case 3: logger::severity_level_ = logger::info; break;
+                		case 4: logger::severity_level_ = logger::none; break;
+                		default:
+	                		break;
+                	}
+                }
             }
 
-            char buf[256];
-            const time_t tm = time(0);
-            strftime(buf, sizeof(buf), logger::format_.c_str(), localtime(&tm));
-            return buf;
+            const time_t t = std::time(nullptr);
+            std::tm tm = *std::localtime(&t);
+
+            std::stringstream ss;
+            ss.imbue(std::locale(logger::locale_.c_str()));
+            ss << std::put_time(&tm, logger::format_.c_str());
+            return ss.str();
         }
 
         // output
@@ -423,9 +428,9 @@ namespace logger_detail_ {
                 }
                 else
                 {
-                    std::stringstream s;
-                    s << "logger: cannot redirect log to file " << file_name_;
-                    throw std::runtime_error(s.str());
+                    std::stringstream ss;
+                    ss << "logger: cannot redirect log to file " << file_name_;
+                    throw std::runtime_error(ss.str());
                 }
             }
         }
@@ -448,20 +453,21 @@ namespace logger_detail_ {
         }
 
     private:
+    	logger(const logger &rhs);
+	    logger& operator=(const logger&);
+
+        static bool env_check_;
         static severity_type severity_level_;
         static severity_map object_severity_level_;
-        static bool severity_env_check_;
-
         static std::string format_;
-        static bool format_env_check_;
+        static std::string locale_;
 
         static std::ofstream file_output_;
         static std::string file_name_;
         static std::streambuf* saved_buf_;
     };
 
-    bool logger::severity_env_check_ = true;
-    bool logger::format_env_check_ = true;
+    bool logger::env_check_ = true;
 
     logger::severity_type logger::severity_level_ =
         #if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
@@ -484,6 +490,7 @@ namespace logger_detail_ {
     #define __xstr__(s) __str__(s)
     #define __str__(s) #s
     std::string logger::format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
+    std::string logger::locale_ = __xstr__(WATERSPOUT_LOG_LOCALE);
     #undef __xstr__
     #undef __str__
 
@@ -520,7 +527,7 @@ namespace logger_detail_ {
              class Ch = char,
              class Tr = std::char_traits<Ch>,
              class A = std::allocator<Ch> >
-    class base_log : public noncopyable
+    class base_log
     {
     public:
         typedef OutputPolicy<Ch, Tr, A> output_policy;
@@ -557,6 +564,9 @@ namespace logger_detail_ {
         }
 
     private:
+    	base_log(const base_log &rhs);
+	    base_log& operator=(const base_log&);
+
 #if !defined(WATERSPOUT_VOID_LOGGING)
         inline bool check_severity()
         {
@@ -580,7 +590,7 @@ namespace logger_detail_ {
              class Ch = char,
              class Tr = std::char_traits<Ch>,
              class A = std::allocator<Ch> >
-    class base_log_always : public noncopyable
+    class base_log_always
     {
     public:
         typedef OutputPolicy<Ch, Tr, A> output_policy;
@@ -611,6 +621,9 @@ namespace logger_detail_ {
         }
 
     private:
+    	base_log_always(const base_log_always &rhs);
+	    base_log_always& operator=(const base_log_always&);
+
         inline bool check_severity()
         {
             return Severity >= logger::get_object_severity(object_name_);
@@ -1065,7 +1078,7 @@ math::math(int flags, bool fallback)
             throw std::runtime_error("math_factory: MMX not available!");
 #endif
     }
-    
+
 #if defined(WATERSPOUT_SYSTEM_ANDROID)
     if ((android_getCpuFamily() == ANDROID_CPU_FAMILY_ARM &&
          (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0) ||

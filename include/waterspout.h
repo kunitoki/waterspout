@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2015 Lucio Asnaghi
  *
- * 
+ *
  * The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -201,6 +201,8 @@
 
     #define rounding_mode_type \
         int
+    #define rounding_mode(variable) \
+        variable
 
     #define original_rounding_mode(var_name) \
         var_name = fegetround();
@@ -220,7 +222,7 @@
         ::feenableexcept(FE_DIVBYZERO | FE_INVALID | \
           FE_OVERFLOW | FE_UNDERFLOW); \
         ::feclearexcept(FE_ALL_EXCEPT);
-                                                                 
+
     #define disable_floating_point_assertions \
         ::fedisableexcept(FE_ALL_EXCEPT); \
         ::feclearexcept(FE_ALL_EXCEPT);
@@ -232,12 +234,14 @@
     #include <float.h>
 
     #define aligned(type_name, alignment) \
-        __declspec(align(alignment)) type_name 
+        __declspec(align(alignment)) type_name
 
     #define forcedinline __forceinline
 
     #define rounding_mode_type \
         unsigned int
+    #define rounding_mode(variable) \
+        variable
 
     #define original_rounding_mode(var_name) \
         var_name = ::_controlfp(0, 0);
@@ -258,7 +262,7 @@
         ::_controlfp((unsigned)~(_EM_INVALID | _EM_ZERODIVIDE | \
           _EM_OVERFLOW | _EM_UNDERFLOW |_EM_DENORMAL),  \
           (unsigned)_MCW_EM);
-                                                                 
+
     #define disable_floating_point_assertions \
         ::_clearfp(); \
         ::_controlfp((unsigned)(_EM_INVALID | _EM_ZERODIVIDE |  \
@@ -274,9 +278,10 @@
     #define enable_floating_point_assertions
     #define disable_floating_point_assertions
     #define rounding_mode_type int
+    #define rounding_mode(variable)
     #define original_rounding_mode(var_name)
     #define round_float_to(mode)
-    #define round_float_to_nearest 
+    #define round_float_to_nearest
     #define round_float_to_zero
     #define round_float_to_up
     #define round_float_to_down
@@ -378,21 +383,23 @@ struct float_rounding_mode
     {
         original_rounding_mode(old_mode_);
 
-        switch(type)
-        {
-        case NEAREST:
-            round_float_to_nearest;
-            break;
-        case ZERO:
-            round_float_to_zero;
-            break;
-        case UPWARD:
-            round_float_to_up;
-            break;
-        case DOWNWARD:
-            round_float_to_down;
-            break;
-        }
+        rounding_mode(
+	        switch(type)
+	        {
+	        case NEAREST:
+	            round_float_to_nearest;
+	            break;
+	        case ZERO:
+	            round_float_to_zero;
+	            break;
+	        case UPWARD:
+	            round_float_to_up;
+	            break;
+	        case DOWNWARD:
+	            round_float_to_down;
+	            break;
+	        }
+	    )
     }
 
     ~float_rounding_mode()
@@ -401,7 +408,7 @@ struct float_rounding_mode
     }
 
 private:
-    rounding_mode_type old_mode_;
+    rounding_mode(rounding_mode_type old_mode_;)
 };
 
 
@@ -578,7 +585,7 @@ public:
 
         return data_[index];
     }
-    
+
     forcedinline const T& operator[](uint32 index) const
     {
         assert(data_ != nullptr);
