@@ -6,14 +6,14 @@ configuration:
 
 environment:
   matrix:
-  - VS_VERSION: 10
+  - VS_VERSION: 13
     VS_PLATFORM: win32
-  - VS_VERSION: 10
+  - VS_VERSION: 13
     VS_PLATFORM: x64
 
 before_build:
 - cd build
-- premake4.exe vs2010
+- premake4.exe vs2013
 - cd ..
 
 build:
