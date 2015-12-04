@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <chrono>
 #include <stdexcept>
 #include <memory>
 #include <mutex>
@@ -313,7 +314,7 @@ namespace logger_detail_ {
             }
 
             const time_t t = std::time(nullptr);
-#if defined(WATERSPOUT_COMPILER_GCC) && WATERSPOUT_COMPILER_GCC_VERSION < 40900
+#if defined(WATERSPOUT_SYSTEM_LINUX) && defined(WATERSPOUT_COMPILER_GCC) && WATERSPOUT_COMPILER_GCC_VERSION < 50000
             char buf[256];
             ::strftime(buf, sizeof(buf), format_.c_str(), std::localtime(&tm));
             return buf;
