@@ -19,6 +19,7 @@ before_script:
   - ./premake4.lnx gmake
   - $CXX --version
 script:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
   - make config=debug32 && ../bin/Linux/debug32/waterspout
   - make config=release32 && ../bin/Linux/release32/waterspout
   - make config=debug64 && ../bin/Linux/debug64/waterspout
