@@ -20,7 +20,6 @@
 local projectname = "waterspout"
 local projectkind = "ConsoleApp"
 
-
 --===========================================================================--
 -- Common functions
 --===========================================================================--
@@ -49,8 +48,6 @@ function setup_solution(projectname, projectkind, platformname)
     "EnableSSE2",
     "ExtraWarnings",
     "FatalWarnings",
-    "OptimizeSpeed",
-    "NoFramePointer",
     "NoImportLib"
   }
 
@@ -80,7 +77,7 @@ function setup_solution(projectname, projectkind, platformname)
 
   configuration { "release*" }
     defines { "NDEBUG=1" }
-    flags { "OptimizeSpeed" }
+    flags { "OptimizeSpeed", "NoFramePointer" }
   configuration {}
 
   -- global defines
@@ -102,7 +99,6 @@ function setup_solution(projectname, projectkind, platformname)
   }
 
 end
-
 
 --===========================================================================--
 -- begin specific configurations
@@ -167,19 +163,6 @@ elseif _ACTION == "xcode3" then
   --[[
   links {
     "AudioToolbox.framework",
-    "AudioUnit.framework",
-    "Carbon.framework",
-    "Cocoa.framework",
-    "CoreAudio.framework",
-    "CoreAudioKit.framework",
-    "CoreMIDI.framework",
-    "DiscRecording.framework",
-    "IOKit.framework",
-    "OpenGL.framework",
-    "QTKit.framework",
-    "QuartzCore.framework",
-    "QuickTime.framework",
-    "WebKit.framework"
   }
   ]]--
 
