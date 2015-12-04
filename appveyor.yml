@@ -13,7 +13,7 @@ environment:
 
 before_build:
 - cd build
-- premake4.exe vs2013
+- premake4.exe vs2010
 - cd ..
 
 build:
