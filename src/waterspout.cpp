@@ -33,6 +33,7 @@
 #include <ctime>
 #include <stdexcept>
 #include <memory>
+#include <mutex>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -142,128 +143,13 @@ namespace waterspout {
 
 //------------------------------------------------------------------------------
 
-/**
- * Singleton class
- */
-
-template <typename T>
-class create_using_new_
-{
-public:
-    static T* create()
-    {
-        return new T;
-    }
-
-    static void destroy(T* obj)
-    {
-        delete obj;
-    }
-};
-
-template <typename T>
-class create_static_
-{
-private:
-    union max_align
-    {
-        char t_[sizeof(T)];
-        short int short_int_;
-        int int_;
-        long int long_int_;
-        float float_;
-        double double_;
-        long double long_double_;
-        struct test_struct;
-        int test_struct::*ptr_member_;
-        int (test_struct::*ptr_nember_func_)(int);
-    };
-
-public:
-    static T* create()
-    {
-        static max_align static_memory;
-
-        return new(&static_memory) T;
-    }
-
-    static void destroy(volatile T* obj)
-    {
-        obj->~T();
-    }
-};
-
-template <typename T,
-          template <typename U> class create_policy=create_static_> class singleton
-{
-    friend class create_policy<T>;
-
-    static T* ptr_instance_;
-    static bool destroyed_;
-
-    singleton(const singleton &rhs);
-    singleton& operator=(const singleton&);
-
-    static void on_dead_reference()
-    {
-        throw std::runtime_error("singleton: dead reference !");
-    }
-
-    static void destroy_singleton()
-    {
-        create_policy<T>::destroy(ptr_instance_);
-        ptr_instance_ = nullptr;
-        destroyed_ = true;
-    }
-
-protected:
-    singleton() {}
-
-public:
-    static T& instance()
-    {
-        if (! ptr_instance_)
-        {
-            if (! ptr_instance_)
-            {
-                if (destroyed_)
-                {
-                    destroyed_ = false;
-                    on_dead_reference();
-                }
-                else
-                {
-                    ptr_instance_ = create_policy<T>::create();
-
-                    // register destruction
-                    std::atexit(&destroy_singleton);
-                }
-            }
-        }
-        return *ptr_instance_;
-    }
-};
-
-template <typename T,
-          template <typename U> class create_policy>
-T* singleton<T, create_policy>::ptr_instance_ = nullptr;
-
-template <typename T,
-          template <typename U> class create_policy>
-bool singleton<T, create_policy>::destroyed_ = false;
-
-
-//==============================================================================
-
-//------------------------------------------------------------------------------
-
 #ifndef WATERSPOUT_LOG_FORMAT
   //#define WATERSPOUT_LOG_FORMAT  Waterspout LOG> %Y-%m-%d %H:%M:%S:
   #define WATERSPOUT_LOG_FORMAT  Waterspout LOG>
 #endif
 
 #ifndef WATERSPOUT_LOG_LOCALE
-  #define WATERSPOUT_LOG_LOCALE  en_US.utf8
+  #define WATERSPOUT_LOG_LOCALE  en_US.UTF-8
 #endif
 
 #ifndef WATERSPOUT_DEFAULT_LOG_SEVERITY
@@ -282,8 +168,7 @@ namespace logger_detail_ {
     /*
      * The main logger class
      */
-    class logger :
-        public singleton<logger>
+    class logger
     {
     public:
         enum severity_type
@@ -297,19 +182,52 @@ namespace logger_detail_ {
 
         typedef std::map<std::string, severity_type> severity_map;
 
+        // default constructor
+        explicit logger()
+        {
+			env_check_ = true;
+
+			severity_level_ =
+				#if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
+    	        	logger::debug
+				#elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 1
+		            logger::warn
+		        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 2
+		            logger::error
+		        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 3
+		            logger::info
+		        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 4
+		            logger::none
+		        #else
+		            #error "Wrong default log severity level specified!"
+		        #endif
+		    ;
+
+		    object_severity_level_ = logger::severity_map();
+
+		    #define __xstr__(s) __str__(s)
+		    #define __str__(s) #s
+		    format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
+		    locale_ = __xstr__(WATERSPOUT_LOG_LOCALE);
+		    #undef __xstr__
+		    #undef __str__
+
+			saved_buf_ = nullptr;
+        }
+
         // global security level
-        static severity_type get_severity()
+        severity_type get_severity()
         {
             return severity_level_;
         }
 
-        static void set_severity(const severity_type& severity_level)
+        void set_severity(const severity_type& severity_level)
         {
             severity_level_ = severity_level;
         }
 
         // per object security levels
-        static severity_type get_object_severity(std::string const& object_name)
+        severity_type get_object_severity(std::string const& object_name)
         {
             severity_map::iterator it = object_severity_level_.find(object_name);
             if (object_name.empty() || it == object_severity_level_.end())
@@ -322,8 +240,8 @@ namespace logger_detail_ {
             }
         }
 
-        static void set_object_severity(std::string const& object_name,
-                                        const severity_type& security_level)
+        void set_object_severity(std::string const& object_name,
+                                 const severity_type& security_level)
         {
             if (! object_name.empty())
             {
@@ -331,62 +249,62 @@ namespace logger_detail_ {
             }
         }
 
-        static void clear_object_severity()
+        void clear_object_severity()
         {
             object_severity_level_.clear();
         }
 
         // format
-        static std::string get_format()
+        std::string get_format()
         {
             return format_;
         }
 
-        static void set_format(std::string const& format)
+        void set_format(std::string const& format)
         {
             format_ = format;
         }
 
         // locale
-        static std::string get_locale()
+        std::string get_locale()
         {
             return locale_;
         }
 
-        static void set_locale(std::string const& locale)
+        void set_locale(std::string const& locale)
         {
             locale_ = locale;
         }
 
         // interpolate the format string for output
-        static std::string str()
+        std::string str()
         {
             // update the variables from getenv if this is the first time
-            if (logger::env_check_)
+            if (env_check_)
             {
-                logger::env_check_ = false;
+                env_check_ = false;
 
                 const char* log_format = getenv("WATERSPOUT_LOG_FORMAT");
                 if (log_format != nullptr)
                 {
-                    logger::format_ = log_format;
+                    format_ = log_format;
                 }
 
                 const char* log_locale = getenv("WATERSPOUT_LOG_LOCALE");
                 if (log_locale != nullptr)
                 {
-                    logger::locale_ = log_locale;
+                    locale_ = log_locale;
                 }
 
                 const char* log_severity = getenv("WATERSPOUT_LOG_SEVERITY");
                 if (log_severity != nullptr)
                 {
                 	switch (std::atoi(log_severity)) {
-                		case 0: logger::severity_level_ = logger::debug; break;
-                		case 1: logger::severity_level_ = logger::warn; break;
-                		case 2: logger::severity_level_ = logger::error; break;
-                		case 3: logger::severity_level_ = logger::info; break;
-                		case 4: logger::severity_level_ = logger::none; break;
+                		case 0: severity_level_ = logger::debug; break;
+                		case 1: severity_level_ = logger::warn; break;
+                		case 2: severity_level_ = logger::error; break;
+                		case 3: severity_level_ = logger::info; break;
+                		case 4: severity_level_ = logger::none; break;
                 		default:
 	                		break;
                 	}
@@ -397,13 +315,13 @@ namespace logger_detail_ {
             std::tm tm = *std::localtime(&t);
 
             std::stringstream ss;
-            ss.imbue(std::locale(logger::locale_.c_str()));
-            ss << std::put_time(&tm, logger::format_.c_str());
+            ss.imbue(std::locale(locale_.c_str()));
+            ss << std::put_time(&tm, format_.c_str());
             return ss.str();
         }
 
         // output
-        static void use_file(std::string const& filepath)
+        void use_file(std::string const& filepath)
         {
             // save clog rdbuf
             if (saved_buf_ == nullptr)
@@ -435,7 +353,7 @@ namespace logger_detail_ {
             }
         }
 
-        static void use_console()
+        void use_console()
         {
             // save clog rdbuf
             if (saved_buf_ == nullptr)
@@ -452,51 +370,47 @@ namespace logger_detail_ {
             std::clog.rdbuf(saved_buf_);
         }
 
+        static logger* instance()
+        {
+			logger* logger_instance = instance_.load(std::memory_order_relaxed);
+
+		    std::atomic_thread_fence(std::memory_order_acquire);
+    		if (logger_instance == nullptr)
+    		{
+				std::lock_guard<std::mutex> lock(instance_mutex_);
+
+				logger_instance = instance_.load(std::memory_order_relaxed);
+				if (logger_instance == nullptr)
+				{
+					logger_instance = new logger;
+
+            		std::atomic_thread_fence(std::memory_order_release);
+            		instance_.store(logger_instance, std::memory_order_relaxed);
+		        }
+    		}
+
+    		return logger_instance;
+        }
+
     private:
     	logger(const logger &rhs);
 	    logger& operator=(const logger&);
 
-        static bool env_check_;
-        static severity_type severity_level_;
-        static severity_map object_severity_level_;
-        static std::string format_;
-        static std::string locale_;
+	    static std::atomic<logger*> instance_;
+	    static std::mutex instance_mutex_;
 
-        static std::ofstream file_output_;
-        static std::string file_name_;
-        static std::streambuf* saved_buf_;
+        bool env_check_;
+        severity_type severity_level_;
+        severity_map object_severity_level_;
+        std::string format_;
+        std::string locale_;
+        std::ofstream file_output_;
+        std::string file_name_;
+        std::streambuf* saved_buf_;
     };
 
-    bool logger::env_check_ = true;
-
-    logger::severity_type logger::severity_level_ =
-        #if WATERSPOUT_DEFAULT_LOG_SEVERITY == 0
-            logger::debug
-        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 1
-            logger::warn
-        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 2
-            logger::error
-        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 3
-            logger::info
-        #elif WATERSPOUT_DEFAULT_LOG_SEVERITY == 4
-            logger::none
-        #else
-            #error "Wrong default log severity level specified!"
-        #endif
-    ;
-
-    logger::severity_map logger::object_severity_level_ = logger::severity_map();
-
-    #define __xstr__(s) __str__(s)
-    #define __str__(s) #s
-    std::string logger::format_ = __xstr__(WATERSPOUT_LOG_FORMAT);
-    std::string logger::locale_ = __xstr__(WATERSPOUT_LOG_LOCALE);
-    #undef __xstr__
-    #undef __str__
-
-    std::ofstream logger::file_output_;
-    std::string logger::file_name_;
-    std::streambuf* logger::saved_buf_ = 0;
+    std::atomic<logger*> logger::instance_;
+    std::mutex logger::instance_mutex_;
 
 
     /*
@@ -510,8 +424,12 @@ namespace logger_detail_ {
 
         void operator()(const logger::severity_type& /*severity*/, const stream_buffer &s)
         {
-            std::clog << logger::str() << " " << s.str() << std::endl;
+        	std::lock_guard<std::mutex> lock(mutex_);
+            std::clog << logger::instance()->str() << " " << s.str() << std::endl;
         }
+
+    private:
+    	std::mutex mutex_;
     };
 
 
@@ -570,7 +488,7 @@ namespace logger_detail_ {
 #if !defined(WATERSPOUT_VOID_LOGGING)
         inline bool check_severity()
         {
-            return Severity >= logger::get_object_severity(object_name_);
+            return Severity >= logger::instance()->get_object_severity(object_name_);
         }
 
         typename output_policy::stream_buffer streambuf_;
@@ -626,7 +544,7 @@ namespace logger_detail_ {
 
         inline bool check_severity()
         {
-            return Severity >= logger::get_object_severity(object_name_);
+            return Severity >= logger::instance()->get_object_severity(object_name_);
         }
 
         typename output_policy::stream_buffer streambuf_;
@@ -753,8 +671,8 @@ enum CpuEndianess
 
 void cpuid(uint32 op, uint32& eax, uint32& ebx, uint32& ecx, uint32& edx)
 {
-#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW)
-    // GCC/MINGW provides a __get_cpuid function
+#if defined(WATERSPOUT_COMPILER_GCC) || defined(WATERSPOUT_COMPILER_MINGW) || defined(WATERSPOUT_COMPILER_CLANG)
+    // GCC/MINGW/CLANG provides a __get_cpuid function
     __get_cpuid(op, &eax, &ebx, &ecx, &edx);
 
 #elif defined(WATERSPOUT_COMPILER_MSVC)

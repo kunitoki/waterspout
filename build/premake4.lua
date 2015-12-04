@@ -28,7 +28,7 @@ function setup_solution(projectname, projectkind, platformname)
 
   -- solution
   solution(projectname)
-  platforms { "x32", "x64" }    
+  platforms { "x32", "x64" }
 
   if platformname == "Linux" then
     configurations { "debug", "release" }
@@ -49,6 +49,8 @@ function setup_solution(projectname, projectkind, platformname)
     "EnableSSE2",
     "ExtraWarnings",
     "FatalWarnings",
+    "OptimizeSpeed",
+    "NoFramePointer",
     "NoImportLib"
   }
 
@@ -116,7 +118,7 @@ if _ACTION == "gmake" then
 
   buildoptions {
     "-march=native",
-    "-std=c++0x",
+    "-std=c++0x", -- should be -std=c++11 (this is needed as we build for old gcc in travis)
     "-fPIC",
     "-Wno-error"
   }
